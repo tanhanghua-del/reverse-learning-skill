@@ -1,0 +1,6 @@
+.DS_Store
+*.bak
+*.swp
+__pycache__/
+.venv/
+node_modules/

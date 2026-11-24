@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>反向学习：学习力的五项修炼 · 知识蒸馏</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #fdfbf7; --card-bg: #fff; --text: #2c2416; --text-light: #7a7265;
+  --accent: #b5342e; --accent-soft: rgba(181,52,46,0.07); --accent-border: rgba(181,52,46,0.2);
+  --border: #e8e2d8; --radius: 14px; --shadow: 0 2px 8px rgba(0,0,0,0.05);
+  --green: #2e7d32; --green-soft: rgba(46,125,50,0.07); --blue: #1565c0;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg); color: var(--text);
+  line-height: 1.75; font-size: 15px; }
+code { font-family: Consolas, Monaco, monospace; font-size: 0.85em;
+  background: var(--accent-soft); padding: 0.05em 0.35em; border-radius: 4px; }
+.sidebar { position: fixed; left: 0; top: 0; width: 240px; height: 100vh;
+  background: var(--card-bg); border-right: 1px solid var(--border);
+  overflow-y: auto; padding: 2rem 1rem; z-index: 10; }
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.sidebar .logo { font-family: 'Noto Serif SC', serif; font-size: 1.05rem; font-weight: 700;
+  color: var(--accent); margin-bottom: 1.5rem; text-decoration: none; display: block; }
+.sidebar .group-label { font-size: 0.7rem; font-weight: 500; color: var(--text-light);
+  text-transform: uppercase; letter-spacing: 0.05em; margin: 1rem 0 0.3rem; font-style: italic; }
+.sidebar a { display: block; padding: 0.3rem 0.5rem; font-size: 0.85rem; color: var(--text);
+  text-decoration: none; border-radius: 6px; transition: background 0.2s; }
+.sidebar a:hover { background: var(--accent-soft); }
+.sidebar a.active { color: var(--accent); font-weight: 500; background: var(--accent-soft); }
+.sidebar a.sub { padding-left: 1.5rem; font-size: 0.8rem; color: var(--text-light); }
+.main { margin-left: 240px; max-width: 860px; padding: 3rem 2rem; }
+.hero { text-align: center; margin-bottom: 3rem; }
+.hero .label { font-size: 0.75rem; font-weight: 500; color: var(--text-light);
+  letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+.hero h1 { font-family: 'Noto Serif SC', serif; font-size: clamp(2rem, 5vw, 2.8rem);
+  color: var(--accent); font-weight: 700; line-height: 1.3; }
+.hero .subtitle { font-size: 1rem; color: var(--text-light); margin-top: 0.5rem; }
+.hero .meta { font-size: 0.85rem; color: var(--text-light); margin-top: 0.6rem; }
+.hero .hook { margin-top: 1.5rem; padding: 1rem 1.5rem; border-left: 4px solid var(--accent);
+  background: var(--accent-soft); font-size: 1.05rem; font-weight: 500; text-align: left; }
+.section { margin: 2.5rem 0; scroll-margin-top: 1rem; }
+.section-title { font-family: 'Noto Serif SC', serif; font-size: 1.3rem; font-weight: 700;
+  padding-bottom: 0.5rem; border-bottom: 2px solid var(--accent-soft); margin-bottom: 1.2rem; }
+.card-grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem; margin-bottom: 1.5rem; }
+.card, .info-card { background: var(--card-bg); border-radius: var(--radius); padding: 1.3rem;
+  box-shadow: var(--shadow); border: 1px solid var(--border);
+  transition: transform 0.2s, box-shadow 0.2s; }
+.card:hover, .info-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+.info-card h4, .card h4 { font-family: 'Noto Serif SC', serif; color: var(--accent); margin-bottom: 0.35rem; }
+.info-card h4 { font-size: 0.85rem; } .card h4 { font-size: 1rem; }
+.info-card p, .card p { font-size: 0.9rem; }
+.triple-card { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+.triple-card .tc { background: var(--card-bg); border-radius: var(--radius); padding: 1.5rem;
+  box-shadow: var(--shadow); border: 1px solid var(--border); border-top: 3px solid var(--accent); }
+.tc .num { font-size: 0.75rem; font-weight: 700; color: var(--accent); }
+.tc .text { font-size: 0.95rem; margin-top: 0.3rem; }
+.chain { list-style: none; border-left: 3px solid var(--accent); padding-left: 1.2rem; margin: 1rem 0; }
+.chain li { position: relative; padding: 0.45rem 0; font-size: 0.95rem; }
+.chain li::before { content: '▸'; position: absolute; left: -1.05rem; color: var(--accent); font-size: 0.8rem; }
+.insight-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; }
+.foldable { margin-bottom: 0.8rem; }
+.foldable .fh { display: flex; align-items: center; gap: 0.5rem; width: 100%; text-align: left;
+  font-family: inherit; font-size: inherit; color: inherit; background: var(--card-bg);
+  border-radius: var(--radius); padding: 1rem 1.3rem; cursor: pointer;
+  box-shadow: var(--shadow); border: 1px solid var(--border); user-select: none; }
+.foldable .fh:hover { border-color: var(--accent-border); }
+.foldable .fh:focus-visible { outline: 3px solid var(--accent-border); outline-offset: 2px; }
+.foldable.open .fh { border-radius: var(--radius) var(--radius) 0 0; }
+.foldable .fh .arrow { transition: transform 0.3s; font-size: 0.8rem; color: var(--text-light); }
+.foldable.open .fh .arrow { transform: rotate(90deg); }
+.foldable .fh .ftitle { font-family: 'Noto Serif SC', serif; font-weight: 600; font-size: 1rem; }
+.foldable .fh .badge { font-size: 0.7rem; font-weight: 500; background: var(--accent); color: #fff;
+  padding: 0.1rem 0.5rem; border-radius: 10px; margin-left: auto; white-space: nowrap; }
+.foldable .fb { display: none; background: var(--card-bg);
+  border-radius: 0 0 var(--radius) var(--radius); padding: 1.3rem;
+  border: 1px solid var(--border); border-top: none; }
+.foldable.open .fb { display: block; }
+.fb .lay { display: grid; grid-template-columns: 46px 1fr; gap: 0.2rem 0.9rem;
+  padding: 0.8rem 0; border-top: 1px solid var(--border); }
+.fb .lay:first-child { border-top: none; padding-top: 0.2rem; }
+.fb .lay.core { background: var(--accent-soft); margin: 0 -1.3rem; padding: 0.8rem 1.3rem; }
+.fb .ltag { font-family: 'Noto Serif SC', serif; font-size: 0.75rem; font-weight: 700;
+  color: var(--accent); padding-top: 0.15rem; }
+.fb .lbody { font-size: 0.9rem; min-width: 0; }
+.fb .lbody > p { margin-bottom: 0.5rem; }
+.fb .lbody > p:last-child, .fb .lbody > ul:last-child, .fb .lbody > ol:last-child { margin-bottom: 0; }
+.fb .lbody ul, .fb .lbody ol { padding-left: 1.2rem; margin-bottom: 0.5rem; }
+.fb .lbody li { margin-bottom: 0.25rem; }
+.fb .desc { font-size: 0.82rem; color: var(--text-light); margin-bottom: 0.8rem; }
+.fb .lay-h { font-family: 'Noto Serif SC', serif; font-size: 0.88rem; color: var(--accent);
+  margin: 0.7rem 0 0.4rem; }
+.fb pre.tpl { font-family: Consolas, Monaco, 'Courier New', monospace; font-size: 0.78rem;
+  line-height: 1.65; white-space: pre-wrap; word-break: break-word;
+  background: #fbf8f2; border: 1px solid var(--border); border-left: 3px solid var(--accent);
+  border-radius: 8px; padding: 0.9rem 1rem; margin: 0.5rem 0; color: #3a3226; }
+.trigrow { margin-top: 0.6rem; }
+.trigrow span { display: inline-block; font-size: 0.72rem; color: var(--text-light);
+  background: var(--card-bg); border: 1px solid var(--border);
+  padding: 0.05rem 0.45rem; border-radius: 8px; margin: 0 0.3rem 0.3rem 0; }
+.data-table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.85rem; }
+.data-table th { background: var(--accent); color: #fff; padding: 0.6rem 0.8rem;
+  text-align: left; font-weight: 500; }
+.data-table td { padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+.data-table tr:hover td { background: var(--accent-soft); }
+.table-note { font-size: 0.78rem; color: var(--text-light); margin: -0.4rem 0 1.2rem; line-height: 1.6; }
+.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+.compare-box { padding: 1.2rem; border-radius: var(--radius); }
+.compare-box.old { background: rgba(181,52,46,0.07); border: 1px solid var(--accent-border); }
+.compare-box.new { background: var(--green-soft); border: 1px solid rgba(46,125,50,0.2); }
+.compare-box h4 { font-family: 'Noto Serif SC', serif; margin-bottom: 0.5rem; }
+.compare-box.old h4 { color: var(--accent); } .compare-box.new h4 { color: var(--green); }
+.compare-box ul { list-style: none; font-size: 0.9rem; }
+.compare-box ul li::before { content: '•'; margin-right: 0.5rem; }
+.compare-box ul li { margin-bottom: 0.35rem; }
+blockquote { border-left: 3px solid var(--accent); padding: 0.8rem 1rem; margin: 1rem 0;
+  background: var(--accent-soft); font-size: 0.95rem; border-radius: 0 8px 8px 0; }
+.fb blockquote { margin: 0 0 0.5rem; font-size: 0.88rem; }
+.gloss-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0.8rem; }
+.gloss { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+  padding: 0.9rem 1rem; box-shadow: var(--shadow); transition: border-color 0.2s; }
+.gloss:hover { border-color: var(--accent-border); }
+.gloss h5 { font-family: 'Noto Serif SC', serif; font-size: 0.9rem; color: var(--accent); margin-bottom: 0.25rem; }
+.gloss p { font-size: 0.85rem; }
+.path-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+.path-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1.2rem; box-shadow: var(--shadow); }
+.path-card h4 { font-family: 'Noto Serif SC', serif; font-size: 0.95rem; color: var(--accent); margin-bottom: 0.3rem; }
+.path-card p { font-size: 0.85rem; margin-bottom: 0.5rem; }
+.path-card ul { list-style: none; font-size: 0.82rem; }
+.path-card ul li { padding-left: 1rem; position: relative; color: var(--text-light); margin-bottom: 0.2rem; }
+.path-card ul li::before { content: '→'; position: absolute; left: 0; color: var(--accent); }
+.action-box { background: linear-gradient(135deg, var(--accent) 0%, #8b201a 100%); color: #fff;
+  padding: 2rem; border-radius: var(--radius); margin: 2rem 0; }
+.action-box h3 { font-family: 'Noto Serif SC', serif; font-size: 1.2rem; margin-bottom: 0.6rem; text-align: center; }
+.action-box ol { font-size: 0.92rem; padding-left: 1.4rem; }
+.action-box ol li { margin-bottom: 0.4rem; opacity: 0.95; }
+.footer { margin-top: 4rem; padding-top: 2rem; border-top: 2px solid var(--accent-soft);
+  text-align: center; color: var(--text-light); font-size: 0.8rem; }
+.footer p { margin-bottom: 0.4rem; }
+.footer .src { font-size: 0.75rem; max-width: 660px; margin: 0.8rem auto 0; line-height: 1.7; text-align: left; }
+.revlog { margin: 1.5rem auto 0; max-width: 660px; text-align: left; border: 1px solid var(--border);
+  border-radius: var(--radius); background: var(--card-bg); padding: 1rem 1.2rem; }
+.revlog h5 { font-family: 'Noto Serif SC', serif; font-size: 0.82rem; color: var(--accent); margin-bottom: 0.5rem; }
+.revlog ul { list-style: none; font-size: 0.76rem; line-height: 1.7; }
+.revlog li { margin-bottom: 0.3rem; padding-left: 1rem; position: relative; }
+.revlog li::before { content: '—'; position: absolute; left: 0; color: var(--text-light); }
+/* ---- 外部视角三区块（v1.1）：对立观点 / 拓展书目 / 辩证分析 ---- */
+.cv { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1.2rem 1.3rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
+.cv-claim { font-family: 'Noto Serif SC', serif; font-weight: 600; font-size: 0.98rem;
+  line-height: 1.6; margin-bottom: 0.9rem; padding-bottom: 0.7rem; border-bottom: 1px dashed var(--border); }
+.cv-chain { font-family: 'Noto Sans SC', sans-serif; font-weight: 400; font-size: 0.72rem;
+  color: var(--text-light); margin-left: 0.4rem; white-space: nowrap; }
+.st { display: inline-block; font-size: 0.7rem; font-weight: 500; padding: 0.1rem 0.45rem;
+  border-radius: 8px; margin-right: 0.45rem; vertical-align: 0.12em; white-space: nowrap; }
+.st.root { background: rgba(181,52,46,0.12); color: var(--accent); }
+.st.condition { background: rgba(230,126,34,0.14); color: #b8661a; }
+.st.degree { background: rgba(191,155,48,0.16); color: #8a6d1a; }
+.st.definition { background: rgba(21,101,192,0.1); color: var(--blue); }
+.cv-view { padding: 0.75rem 0 0.75rem 0.9rem; border-left: 2px solid var(--accent-border); margin-bottom: 0.5rem; }
+.cv-view:last-child { margin-bottom: 0; }
+.cv-gist { font-size: 0.9rem; font-weight: 500; line-height: 1.65; }
+.ev { display: inline-block; font-size: 0.68rem; padding: 0.05rem 0.4rem; border-radius: 6px;
+  margin-right: 0.4rem; vertical-align: 0.1em; white-space: nowrap; }
+.ev.verified { background: var(--green-soft); color: var(--green); border: 1px solid rgba(46,125,50,0.25); }
+.ev.unverified { background: rgba(230,126,34,0.1); color: #b8661a; border: 1px solid rgba(230,126,34,0.25); }
+.ev.speculated { background: rgba(0,0,0,0.04); color: var(--text-light); border: 1px solid var(--border); }
+.cv-meta { font-size: 0.78rem; color: var(--text-light); margin-top: 0.35rem; line-height: 1.7; }
+.cv-meta a { color: var(--blue); text-decoration: none; border-bottom: 1px dotted var(--blue); }
+.cv-why { font-size: 0.85rem; margin-top: 0.35rem; }
+.cv-verdict { font-size: 0.85rem; margin-top: 0.35rem; padding: 0.4rem 0.6rem;
+  background: var(--accent-soft); border-radius: 6px; }
+.rg { margin-bottom: 1.6rem; }
+.rg-title { font-family: 'Noto Serif SC', serif; font-size: 1rem; color: var(--accent);
+  margin-bottom: 0.2rem; }
+.rg-desc { font-family: 'Noto Sans SC', sans-serif; font-size: 0.78rem; font-weight: 400;
+  color: var(--text-light); margin-left: 0.5rem; }
+.rg.same .data-table th { background: #2e7d32; }
+.rg.counter .data-table th { background: var(--accent); }
+.rg.upstream .data-table th { background: #1565c0; }
+.rg.method .data-table th { background: #6b5b95; }
+.prio { font-size: 0.72rem; padding: 0.05rem 0.4rem; border-radius: 6px; white-space: nowrap;
+  background: var(--accent-soft); color: var(--accent); }
+.audit { background: var(--card-bg); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+  border-radius: 10px; padding: 1rem 1.1rem; margin-bottom: 0.9rem; }
+.audit h5 { font-family: 'Noto Serif SC', serif; font-size: 0.9rem; color: var(--text);
+  margin-bottom: 0.55rem; }
+.audit dl { display: grid; grid-template-columns: 78px 1fr; gap: 0.25rem 0.7rem; font-size: 0.83rem; }
+.audit dt { color: var(--text-light); font-size: 0.75rem; padding-top: 0.1rem; }
+.audit dd { min-width: 0; }
+.audit .concl { grid-column: 1 / -1; margin-top: 0.5rem; padding: 0.45rem 0.6rem;
+  background: var(--accent-soft); border-radius: 6px; font-size: 0.85rem; }
+.nature { display: inline-block; font-size: 0.7rem; font-weight: 500; padding: 0.08rem 0.45rem;
+  border-radius: 8px; margin-right: 0.4rem; }
+.nature.fact { background: rgba(21,101,192,0.1); color: var(--blue); }
+.nature.condition { background: rgba(230,126,34,0.14); color: #b8661a; }
+.nature.definition { background: rgba(107,91,149,0.14); color: #6b5b95; }
+.nature.value { background: rgba(181,52,46,0.12); color: var(--accent); }
+.disp { list-style: none; margin: 0.6rem 0 1.2rem; }
+.disp li { position: relative; padding: 0.5rem 0.7rem 0.5rem 2.2rem; font-size: 0.88rem;
+  border-radius: 8px; margin-bottom: 0.45rem; border: 1px solid var(--border); background: var(--card-bg); }
+.disp li::before { position: absolute; left: 0.7rem; top: 0.5rem; font-size: 0.75rem; font-weight: 700; }
+.disp li.safe { border-color: rgba(46,125,50,0.3); background: var(--green-soft); }
+.disp li.safe::before { content: '✓'; color: var(--green); }
+.disp li.conditional { border-color: rgba(230,126,34,0.3); background: rgba(230,126,34,0.06); }
+.disp li.conditional::before { content: '△'; color: #b8661a; }
+.disp li.downgrade { border-color: var(--accent-border); background: var(--accent-soft); }
+.disp li.downgrade::before { content: '↓'; color: var(--accent); }
+.disp li.disclaimer { border-color: rgba(107,91,149,0.3); background: rgba(107,91,149,0.06); }
+.disp li.disclaimer::before { content: '!'; color: #6b5b95; }
+.open-q { font-size: 0.88rem; padding-left: 1.2rem; }
+.open-q li { margin-bottom: 0.35rem; }
+.sub-h { font-family: 'Noto Serif SC', serif; font-size: 0.95rem; font-weight: 600;
+  color: var(--text); margin: 1.6rem 0 0.7rem; padding-left: 0.6rem;
+  border-left: 3px solid var(--accent); }
+.sub-h:first-child { margin-top: 0; }
+@media (max-width: 768px) {
+  .sidebar { display: none; } .main { margin-left: 0; padding: 1.5rem 1rem; }
+  .compare-grid { grid-template-columns: 1fr; } .fb .lay { grid-template-columns: 1fr; }
+  .fb .ltag { padding-top: 0.4rem; }
+}
+@media print {
+  .sidebar { display: none; } .main { margin-left: 0; max-width: 100%; }
+  .foldable .fb { display: block !important; }
+}
+</style>
+</head>
+<body>
+<nav class="sidebar" id="sidebar" aria-label="目录">
+<a class="logo" href="#s-hero">反向学习：学习力的五项修炼</a>
+<div class="group-label">导航</div>
+<a href="#s-overview">书籍画像</a>
+<a href="#s-summary">三句话读懂</a>
+<a href="#s-chain">核心论证链</a>
+<a href="#s-insights">十大核心洞察</a>
+<a href="#s-methods">方法论（8 张，点击展开）</a>
+<a href="#s-compare">心智模型对比</a>
+<a href="#s-scenario">你的处境 → 打开哪个技能</a>
+<a href="#s-counterviews">对立观点：有没有人反对</a>
+<a href="#s-dialectics">辩证分析：到底谁对</a>
+<a href="#s-reading">拓展书目：接着读什么</a>
+<a href="#s-glossary">术语词典</a>
+<a href="#s-path">学习路径</a>
+<a href="#s-action">行动</a>
+<div class="group-label">方法论</div>
+<a href="#m0" class="sub" data-article="m0">01 · 反向学习体检（四坏习惯诊断）</a>
+<a href="#m1" class="sub" data-article="m1">02 · 洞见分类三步法</a>
+<a href="#m2" class="sub" data-article="m2">03 · 参考答案审校（三句口诀）</a>
+<a href="#m3" class="sub" data-article="m3">04 · 互动学习（ICAP · 守破离 · 事前建构）</a>
+<a href="#m4" class="sub" data-article="m4">05 · 四问学习法（听 · 想 · 变 · 用）</a>
+<a href="#m5" class="sub" data-article="m5">06 · 聚焦六维筛选</a>
+<a href="#m6" class="sub" data-article="m6">07 · 模式化学习金字塔</a>
+<a href="#m7" class="sub" data-article="m7">08 · 模式树与模式树林</a>
+</nav>
+<div class="main">
+<div class="hero" id="s-hero">
+<div class="label">学习方法 · 成人学习 · 认知</div>
+<h1>反向学习：学习力的五项修炼</h1>
+<div class="subtitle">反向学习：学习力的五项修炼 · Unlearning: The Five Disciplines of Learning</div>
+<div class="meta">成年人的学习不是加法，是替换旧习惯、重排知识结构，最后以能否迁移结算</div>
+<div class="meta">刘澜　|　机械工业出版社 2025 年 3 月 · 388 页 · ISBN 978-7-111-77476-1</div>
+<div class="hook">你考第一时用的那套学习方式，正在阻碍你。<strong>找标准答案、补齐短板、把知识收进收藏夹、学完存着</strong>——这四件事在学校加分，在工作里减分。刘澜用五项修炼给这个痛苦的自省写了套解法：先破，再重建。</div>
+<blockquote>成年人学习的首要任务不是增加新知识，而是去除错误的、过时的旧知识。——本书第一章的主张（要点复述，非原文）。这句话最经得起检验的版本是：把旧信念降级为假设，然后立刻接一条替代动作。</blockquote>
+</div>
+<div class="section" id="s-overview">
+<h2 class="section-title">书籍画像</h2>
+<div class="card-grid-4"><div class="info-card"><h4>作者是谁</h4><p>刘澜，北大汇丰商学院管理学教授，曾任长江商学院案例研究中心副主任、《世界经理人》总编辑。<strong>全省高考文科状元</strong>出身，却公开承认自己三十岁后才逐渐学会学习——这本书的问题意识来自这段自省。</p></div><div class="info-card"><h4>这本书的野心</h4><p>不是再给一套记忆法或速读术，而是重写<strong>「成年人怎么学」</strong>的整个框架：从评价标准（标准答案→参考答案）、到选材（什么都学→聚焦）、到加工（收碎片→抽模式）、到结算（学完→用出去）。</p></div><div class="info-card"><h4>它凭什么不一样</h4><p>市面学习方法书多在加法侧。这本在<strong>减法与结构侧</strong>：先拆掉学校遗留的习惯，再换一套组织知识的方式。388 页的体量与大量管理学案例，让它更接近教材而非畅销书。</p></div><div class="info-card"><h4>读它之前该知道</h4><p>它的核心口号被实证削弱：学界系统复核后认为「先删除旧知识再学」缺乏支持，真实过程是<strong>搁置而非删除</strong>；而「提炼模式就能跨领域迁移」这一承诺，也与远迁移研究的悲观结论相左。</p></div></div>
+</div>
+<div class="section" id="s-summary">
+<h2 class="section-title">三句话读懂</h2>
+<div class="triple-card"><div class="tc"><div class="num">01</div><div class="text"><strong>学习 = 我知道 + 我不知道</strong>　新知识必须挂在旧知识上。所以「我知道」不是资产清单，是地基——地基里有错，上层全歪。这是全书的公理，五项修炼都从它推出来。</div></div><div class="tc"><div class="num">02</div><div class="text"><strong>新手看见碎片，专家看见模式</strong>　同样一件事，高手抽得出「顾客有不便，我就消灭它」，新手只记住「海底捞发眼镜布」。差别不在知识量，在组织方式。</div></div><div class="tc"><div class="num">03</div><div class="text"><strong>学没学会，只看一件事：用出去没有</strong>　四问学习法把一次输入逼成一个动作——我听到什么、我想到什么、我变成什么、我用到哪里。第四问写不具体，前三问都是自我安慰。</div></div></div>
+</div>
+<div class="section" id="s-chain">
+<h2 class="section-title">核心论证链</h2>
+<ul class="chain"><li>前提 A：新知识必须嫁接在已有知识上（学习 = 我知道 + 我不知道）</li><li>前提 B：成年人脑中的「我知道」大量来自学校隐性课程，多数不适应工作</li><li>→ 推理 1：所以旧知识可能是负债，第一动作是减（反向学习）</li><li>→ 推理 2：减完靠什么判断？靠参考答案思维——不找唯一解，找条件解</li><li>→ 推理 3：条件解太多、注意力有限，必须选材（聚焦）</li><li>→ 推理 4：选来的仍是碎片，必须组织（模式化学习）</li><li>→ 结论：组织好的模式只有用出去才算学会（深层迁移 / 四问学习法）</li></ul>
+</div>
+<div class="section" id="s-insights">
+<h2 class="section-title">十大核心洞察</h2>
+<div class="insight-grid"><div class="card"><h4>先破后立的顺序，可能是反的</h4><p>学界复核认为旧知识从未被真正删除，只是被新理解压制（搁置而非删除）。真实顺序更可能是：新理解足够好用，旧理解自然退场。</p></div><div class="card"><h4>旧习惯会在原情境复发</h4><p>消退研究显示，旧学习并未被摧毁，而是被情境性地压制。回到原公司、原团队、原压力条件，旧反应就回来了。所以「我已经改掉了」需要情境检验。</p></div><div class="card"><h4>「看情况」是技术动作，不是滑头</h4><p>它的操作是分类：把「哪个答案对」改写成「这是哪种情况」。判据很硬——说不出两个类型、各一句因果，就是滑头。</p></div><div class="card"><h4>案例能提炼出几种模式，取决于你站在哪棵树上</h4><p>海底捞发眼镜布，从流程视角是「消灭顾客的不便」，从特色视角是「全过程好吃」，从差异化视角是「弱化服务、突出产品」。同一素材，三条路。</p></div><div class="card"><h4>「能列五个案例」很像「懂了」，但不是</h4><p>金字塔第三层「多点碎片」是最舒适的陷阱：你有素材、能讲故事、听着很专业，但说不出一句带条件的因果。</p></div><div class="card"><h4>聚焦的收益是复利，所以不聚焦的代价也是复利</h4><p>已有体系的人吸收新知识更快。这意味着「什么都学一点」的人不是学得慢，是差距在指数级拉大。</p></div><div class="card"><h4>迁移失败的锅，多半不在「没提炼好」</h4><p>迁移成败的主变量是情境距离——新旧场景的线索重叠度。四问学习法管提炼，不管线索。所以行动项必须具体到「什么信号出现时做什么」。</p></div><div class="card"><h4>五问里最容易被跳过的是「变」</h4><p>多数人不是没听懂，是听懂了直接照搬。变形要动三处：换对象、换场景、加条件。缺一处，就是「学而乱用」。</p></div><div class="card"><h4>知识的组织方式可以被教，素材量不能</h4><p>这是本书最稳的一半，也是它最容易被误读的一半。模式加速的是「组织已有素材」，替代不了「有素材」。</p></div><div class="card"><h4>口诀活下来，条件死了</h4><p>书的结构是「策略 + 口诀」，二手传播只留下口诀。用这本书的正确方式，是每记一句口诀，同时记一条它什么时候失效。</p></div></div>
+</div>
+<div class="section" id="s-methods">
+<h2 class="section-title">方法论（8 张，点击展开）</h2>
+<div class="foldable" id="m0"><button class="fh" type="button" aria-expanded="false" aria-controls="m0-body"><span class="arrow">▶</span><span class="ftitle">反向学习体检（四坏习惯诊断）</span><span class="badge">6 维</span></button><div class="fb" id="m0-body"><div class="desc">当旧经验突然失灵、同一类错误反复出现时，用四坏习惯体检把'我以为是常识的信念'找出来，并换成可验证的新动作。用于成年人的经验失效诊断，不是用来学新知识的。<div class="trigrow"><span>旧经验不管用</span><span>反复踩同一个坑</span><span>反向学习</span><span>忘掉旧知识</span><span>学校那套不灵了</span><span>听懂了但做不到</span></div></div><div class="lay"><div class="ltag">原文</div><div class="lbody"><blockquote>来自《反向学习：学习力的五项修炼》第一章「反向学习」、第一节「反向学习的几个要点」</blockquote>
+<p><strong>来源档位：本章内容为要点复述，非原文</strong>（本次蒸馏未获全书全文，仅据目录、出版社内容简介与多份独立读书笔记复原）。以下要点在至少三份互相独立的笔记中一致出现：</p>
+<ul><li>成年人学习的首要任务不是增加新知识，而是去除错误的、过时的、低效的旧知识（大意）。</li><li>学校教育的「隐性课程」留下四个坏习惯：①标准答案思维方式 ②弥补短板、全面发展 ③碎片化学习 ④学用脱节（大意）。</li><li>第一章列出的要点包含：对成年人特别重要、VUCA 时代尤其重要、比正向学习更难、有层次之分、组织也需要反向学习（大意）。</li><li>本章口诀：<strong>「我要改变什么？」</strong>（该句在多份独立笔记与公开书摘中写法一致，可信度较高；但未核对原书页码）</li></ul></div></div><div class="lay core"><div class="ltag">释义</div><div class="lbody"><p>反向学习不是「清空大脑」，也不是「不学」。它的真实动作是三步降级：</p>
+<ol><li><strong>把「常识」降级为「假设」</strong>——那条你从来没怀疑过的信念（「先把资料看完再动手」「短板必须补齐」），原本以「事实」的身份在你脑子里运行，现在把它改标为「某年、某条件下形成的假设」。</li><li><strong>定位它的有效期</strong>——它是学校场景的产物，还是某个已经消失的组织环境的产物？条件变了没有？</li><li><strong>用新习惯覆盖旧习惯</strong>——书中称「用加法做减法」：不是删掉旧信念（做不到），而是装一条新的、并在同一触发场景里优先调用它。</li></ol>
+<p>第三点是这条方法论最容易被忽略、也最要紧的地方：它决定了「反向学习」是可执行的操作，还是一句口号。</p></div></div><div class="lay"><div class="ltag">案例</div><div class="lbody"><ul><li><strong>作者自身的反差</strong>：全省高考状元出身，却在工作中长期感到「有什么地方不对劲」，三十岁后才逐渐学会学习。书里把这段经历用作全书的问题起点（大意）。</li><li><strong>读领导力书的速度</strong>：作者称自己读领导力领域的书两三个小时可读完一本，原因不是阅读天赋，而是脑中已有体系，新内容多为已有结论的新表述或新案例（大意，读书笔记转述）。</li><li><strong>海底捞「眼镜布」的反面示范</strong>：只把「给顾客发眼镜布」这个动作搬回自己店里，结果失败——这是学用脱节的典型样本，在第五章被反复用于对比表层迁移与深层迁移。</li><li><strong>课堂上的回答清单</strong>：作者反复问管理者「最重要的能力是什么」，收到的答案五花八门；这份清单本身被用来证明大多数人在寻找一个标准答案（大意）。</li></ul></div></div><div class="lay"><div class="ltag">场景</div><div class="lbody"><p><strong>什么时候用：</strong></p>
+<ul><li>换岗、晋升、跨行业之后，过去被证明有效的做法突然不灵，且说不清哪里不对。</li><li>同一类问题第三次出现（第三次带的团队失控、第三次项目延期到你手上）。</li><li>上完培训、读完书，「听懂了」但一周后行为没变。</li><li>你在给建议时反复用同一句话开头（「其实就是……」），而对方总是不接受。</li></ul>
+<p><strong>什么时候不用：</strong></p>
+<ul><li>进入完全陌生的领域：此时主要矛盾是「没有基础」，先建正向知识，破无可破。</li><li>高压救火期：先止血，反向学习需要认知余量，不是危机处置工具。</li><li>你还没有替代动作：只拆不建会拆成虚无（详见 B 段）。</li></ul></div></div><div class="lay"><div class="ltag">执行</div><div class="lbody"><ol><li><strong>锁定一个具体事件</strong>，不是一类感受。写：「上周三的评审会，我又一次在没确认目标的情况下开始排方案」。禁止写「我学习效率低」。</li><li><strong>倒推信念</strong>：问「我当时依据的那条信念是什么？如果它不成立，我当时就不会那么做。」写出原句——必须是一句可判断真假的话。</li><li><strong>追溯来源与有效期</strong>：这条信念是什么时候、在什么场景下形成的（学校考试？上一家公司？某位前领导？）；当时成立需要什么条件；那些条件今天还在不在。</li><li><strong>贴标签</strong>：对照四个坏习惯归一次类——标准答案思维 / 补短板全面发展 / 碎片化学习 / 学用脱节。归不上类的，说明你找到的可能不是「学校习得的习惯」，而是个人经历，处理方式不同。</li><li><strong>写替代动作</strong>，句式必须是「触发信号 → 新动作」，例如「当我想打开第 5 个资料页时 → 先写三行自己的结论」。不要写「不要贪多」。</li><li><strong>设 7 天观察点</strong>：如果新信念成立，这周我应该看到什么具体现象？写成可打勾的一条，一周后回来打勾或改动作。</li><li><strong>一次只改一条</strong>。四条一起改，等于没改。</li></ol></div></div><div class="lay"><div class="ltag">边界</div><div class="lbody"><ul><li><strong>前提条件</strong>：你必须已经有一个可替换的新习惯。没有替代物的「破」只是自我否定。</li><li><strong>常见误用</strong>：把反向学习做成「失败归因于观念错误」的无限循环——每次受挫都挖一层信念，最后挖到「我不行」。这是内耗，不是学习。判断标准：每轮必须产出一个 7 天内可验证的动作，产不出就停下来。</li><li><strong>局限性</strong>：它处理不了「我不知道自己不知道」的盲区。旧信念之所以是旧信念，正因为它对你不可见；单靠自省找不全，必须引入外部反馈（他人观察、失败数据、跨行业同行）。</li><li><strong>替代方案</strong>：全新领域用正向学习（先建立最小知识框架）；技能型任务用示范—练习—反馈，不必先做观念手术。</li><li><strong>最强反驳</strong>：Howells &amp; Scholderer（2016，<em>Management Learning</em> 47(4): 443–463，DOI 10.1177/1350507615624079）系统复核了「unlearning」被引入管理学的全过程，结论是：心理学文献并未提供「先删除旧知识、再学习新知识」的实证支持；在他们检视的高被引案例中，被标注为 unlearning 的现象实际是<strong>「把旧理解搁置（setting aside, not deletion）」</strong>，属于常规的理论更替（theory-change），用「学习」「实践废弃」「消退」等更朴素的概念解释更合适。更早的 Klein（1989）则指出大量学习是在旧知识作为必要背景下发生的（parenthetic learning）。→ <strong>这条批评打中的是顺序问题</strong>：如果旧知识从未被删除、只是被新理解压制，那么「先破后立」的顺序就是虚构的，真实顺序更可能是「立而后破」——新理解足够好用，旧理解自然退场。本卡的 E 段第 5 步（写替代动作）之所以是硬要求，正是因为它把方法论从「删除」拉回到「替换」，这一点与上述批评是相容的；但书中「首要任务是去除旧知识」的强表述不成立。</li></ul></div></div><div class="lay"><div class="ltag">关联</div><div class="lbody"><ul><li>[[three-step-answer]] — 替代「标准答案思维」的具体工具</li><li>[[focus-six-lenses]] — 替代「碎片化学习」的具体工具</li><li>[[four-question-learning]] — 替代「学用脱节」的具体工具</li><li>[[pattern-pyramid]] — 反向前提：先有模式才看得出哪块是碎片</li></ul></div></div></div></div>
+<div class="foldable" id="m1"><button class="fh" type="button" aria-expanded="false" aria-controls="m1-body"><span class="arrow">▶</span><span class="ftitle">洞见分类三步法</span><span class="badge">6 维</span></button><div class="fb" id="m1-body"><div class="desc">当问题没有唯一正确答案、两个专家说法冲突、或你需要给建议却怕给错时，用洞见分类把'哪个答案对'改写成'这是哪种情况'，产出带条件的参考答案。<div class="trigrow"><span>看情况</span><span>没有标准答案</span><span>两个专家说法不一样</span><span>洞见分类</span><span>该怎么选</span><span>给不出建议</span></div></div><div class="lay"><div class="ltag">原文</div><div class="lbody"><blockquote>来自《反向学习：学习力的五项修炼》第二章「参考答案思维方式」，第一节「一句口诀：看情况」、策略一「洞见分类」</blockquote>
+<p><strong>来源档位：要点复述，非原文。</strong> 以下为多份独立笔记一致的表述：</p>
+<ul><li>本章核心口诀：<strong>「看情况」</strong>（多份笔记写法一致）。</li><li>「看情况」的关键是分类；分类要用「洞见分类」，不用「常见分类」（大意）。</li><li>洞见分类的三个特点：<strong>主观、理想、本质</strong>（三份笔记一致；各自解释为「穿透表象由观察者主动切分」「纯化类型、允许现实是混合的」「切在决定结果的那个维度上」——此三句解释为蒸馏者据三特征推演，非原文表述）。</li><li>书中给出「三步回答一切问题」：第一步看情况，第二步提出洞见分类，第三步分析具体属于哪种情况（笔记一致）。</li></ul></div></div><div class="lay core"><div class="ltag">释义</div><div class="lbody"><p>「看情况」在日常语言里是滑头，在这个框架里是一个<strong>技术动作</strong>：把「哪个答案是对的」这个是非问题，改写成「这是哪一种情况」的分类问题。</p>
+<p>关键在「洞见」二字。常见的分类切在<strong>好切</strong>的维度上（行业、职级、年龄、预算档位）；洞见分类切在<strong>决定结果</strong>的维度上。三个判据：</p>
+<p>| 判据 | 含义 | 反例 |<br>|------|------|------|<br>| 主观 | 维度由你按目的选定，不是事物自带的标签 | 按「公司规模」分类，但真正起作用的是「决策权在谁手里」 |<br>| 理想 | 类型是纯化过的，现实允许混合、允许跨类 | 硬要求每个人必须落进唯一一格 |<br>| 本质 | 换掉这个维度，结论会变；不换，结论不变 | 「按性别给管理建议」——换掉性别，结论照样成立，说明它不是本质维度 |</p>
+<p>第三步的产出不是「答案」，是「<strong>参考答案 + 一句适用条件</strong>」。少了那句条件，就退化成了新的标准答案。</p></div></div><div class="lay"><div class="ltag">案例</div><div class="lbody"><ul><li><strong>马斯洛需求层次</strong>被用作洞见分类的范例：按「主导需求」而非按人口学特征切分人群（大意）。</li><li><strong>四国花旗银行员工对比</strong>（书中引迪姆与荣根的研究）：同一道题，美国员工重互惠、德国员工重规则、西班牙员工重友谊、中国员工重权威——用来证明同一问题在不同文化情境下答案不同（大意，读书笔记转述）。</li><li><strong>「管理者最重要的能力是什么」的课堂清单</strong>：作者收集到的答案有沟通、解决问题、战略思考等，这份清单本身被当作「大家都在找标准答案」的证据，而作者的回应是「看情况」（大意）。</li><li><strong>三个石匠的故事</strong>（德鲁克）：同一件事的三种理解，用于说明分类如何改变对同一现象的解释（大意）。</li></ul></div></div><div class="lay"><div class="ltag">场景</div><div class="lbody"><p><strong>什么时候用：</strong></p>
+<ul><li>要向别人给建议，而你知道这个建议在另一些情况下会害人。</li><li>两个都很有经验的人给出相反结论，你想判断该信谁。</li><li>评审会吵不出结果，各方都在争「正确做法」。</li><li>你自己在两个选项之间反复摇摆超过一周。</li></ul>
+<p><strong>什么时候不用：</strong></p>
+<ul><li>有硬约束与明确规范：合规红线、安全规程、数学与账务。这些地方「看情况」是失职。</li><li>必须立刻执行的现场：先按最保守做法动手，事后补分类。</li><li>你在用「看情况」逃避表态：如果对方要的是一句承诺，分类就是拖延。</li></ul></div></div><div class="lay"><div class="ltag">执行</div><div class="lbody"><ol><li><strong>改写问题</strong>：把「X 该怎么做」改写成「在什么情况下，X 应该这样做；在什么情况下不该」。</li><li><strong>列三个候选维度</strong>：对象（谁）／阶段（什么时候）／约束（资源、权力、风险承受力）。这三个覆盖了大多数管理与人际问题。</li><li><strong>做「换维度测试」</strong>：把这个维度从问题里拿掉，结论会不会变？不变 → 不是本质维度，换下一个。这一步是本卡与普通分类的分水岭，不能跳过。</li><li><strong>给每一类写一句因果</strong>：不是描述「这类人如何」，而是「这类人为什么该这样」。写不出因果，说明分类是拍的。</li><li><strong>定位当前情况</strong>：明确说「现在属于第几类」，允许说「第 2 类为主、混有第 3 类」。</li><li><strong>输出参考答案 + 条件</strong>：一句话答案，紧跟一句「如果___变了，这个答案就要改成___」。</li><li><strong>留一个反悔点</strong>：写下什么信号出现时你会重新分类（如「如果三个月内离职率没有下降，说明我分错了类」）。</li></ol></div></div><div class="lay"><div class="ltag">边界</div><div class="lbody"><ul><li><strong>前提条件</strong>：该领域必须存在真实的变异——不同情境确实导致不同最优解。若机制单一（如复利计算），分类是多余的。</li><li><strong>常见误用</strong>：把「看情况」当不表态的挡箭牌。判别方法很硬：<strong>你能不能说出至少两个具体类型，并各给一句因果？</strong> 说不出，就是滑头。</li><li><strong>局限性</strong>：对新手无用。新手连「现在是什么情况」都识别不了，分类框架给他，他只会照着念。分类能力依赖案例库，先攒 20 个同领域的真实案例再来分类。</li><li><strong>替代方案</strong>：有明确因果机制时，直接给机制解释，不必绕道分类；纯执行场景用清单（checklist）比分类可靠。</li><li><strong>最强反驳</strong>：【已查证·非学术】公开读书社区的匿名短评（2025–2026）对本章的六策略整体评价为「看上去有条理性，实则是自嗨」「我似乎得到的都是碎片」——即：这类框架容易产出「看起来很整齐的分类表」，而不产出可执行判断。这条批评打中的是操作化程度，而非「结论皆有前提」这一逻辑本身；它在多大程度上成立，取决于使用者是否执行 E 段第 3 步（换维度测试）——那一步是唯一能证伪分类质量的动作。冲突强度：程度之争（详见 DIALECTICS.md §5）。</li></ul></div></div><div class="lay"><div class="ltag">关联</div><div class="lbody"><ul><li>[[reference-review]] — 分类之后，如何审校每一类里的既有答案</li><li>[[unlearning-audit]] — 分类思维正是用来替换「标准答案思维」的新习惯</li><li>[[four-question-learning]] — 「变」这一步的实质就是重新分类</li></ul></div></div></div></div>
+<div class="foldable" id="m2"><button class="fh" type="button" aria-expanded="false" aria-controls="m2-body"><span class="arrow">▶</span><span class="ftitle">参考答案审校（三句口诀）</span><span class="badge">6 维</span></button><div class="fb" id="m2-body"><div class="desc">当你要照搬一个权威观点、方法论或成功案例时，用假设线—对立线—合成线三道审校，把它从'标准答案'降级为'带条件的参考答案'。<div class="trigrow"><span>照搬</span><span>权威说的</span><span>隐含假设</span><span>反过来想</span><span>学成功案例</span><span>这个方法论靠谱吗</span></div></div><div class="lay"><div class="ltag">原文</div><div class="lbody"><blockquote>来自《反向学习：学习力的五项修炼》第二章「参考答案思维方式」，策略二「标准参考答案」、策略四「注重过程而非结果」、策略五「发现隐含的假设」、策略六「反过来想」</blockquote>
+<p><strong>来源档位：要点复述，非原文。</strong></p>
+<ul><li>策略二「标准参考答案」：「看」的是在绝大多数「情况」下都比较管用的那个答案（大意）——即通用、简单、不够精确但足够管用。</li><li>策略四「注重过程而非结果」：过程才是能力的核心；书中引「成功 = 能力 + 运气」，并推到「巨大的成功 = 多一些能力 + 多很多运气」（大意，多份笔记一致）。</li><li>策略五「发现隐含的假设」：所有的结论都是有假设的；不同场景、不同对象的同一问题，可能隐含完全不同的假设（大意）。</li><li>策略六「反过来想」：笔记记录的四种反法为对立式、互补式、共生式、对位式（大意；四式名称多份笔记一致，各式的具体定义未获全文，本卡不复述其定义）。</li><li>三句口诀：<strong>「如果这个观点是对的，对在哪里？如果这个观点是错的，错在哪里？更好的观点是什么？」</strong>（多份笔记一致引用；未核对页码）</li></ul></div></div><div class="lay core"><div class="ltag">释义</div><div class="lbody"><p>参考答案思维常被误读为「没有对错」。恰恰相反：它要求<strong>更高的判断密度</strong>。标准答案只需服从，参考答案必须审校。三条审校线：</p>
+<ol><li><strong>假设线</strong>：任何结论都是一句「在 A、B、C 成立时，X 成立」的省略式。先把它省略的部分补全，再判断它对你是否成立。</li><li><strong>对立线</strong>：主动构造反例。书中给的四式（对立/互补/共生/对位）本质是在问四种不同的反问——「反面呢」「缺了什么」「两者是否共存」「错位在哪」。</li><li><strong>合成线</strong>：三句口诀把审校收成一个动作——先承认它对的部分（避免抬杠），再定位它错的部分（避免盲从），最后写出你自己的版本（避免停在批判）。</li></ol>
+<p>第三句是分水岭。只做前两句的人，会变成一个「什么都懂但什么都不信」的评论者。</p></div></div><div class="lay"><div class="ltag">案例</div><div class="lbody"><ul><li><strong>成功案例的误学</strong>：因为巨大成功里运气的占比更大，直接学成功者的结论（而非还原其过程）会系统性高估方法的作用；因此书主张「注重过程而非结果」（大意）。</li><li><strong>诺贝尔奖得主的师徒关系</strong>：研究发现获奖者拜师时师傅往往尚未获奖，且受访者认为学徒期间最不重要的是从师傅处获取实际知识，真正学到的是「得出答案的过程」（大意，读书笔记转述，未见原书页码）。</li><li><strong>费曼与玻尔</strong>：玻尔在二战期间点名先与费曼单独讨论，理由是他是「唯一不怕我的人」——被用来说明「守破离」式的平等对话（大意）。</li><li><strong>海底捞致歉信 / 任正非语录</strong>被用作「用模式分析碎片」的素材——即先用假设线还原语境，再判断可迁移部分（大意）。</li></ul></div></div><div class="lay"><div class="ltag">场景</div><div class="lbody"><p><strong>什么时候用：</strong></p>
+<ul><li>你要把某个大厂方法论、某个名人的做法搬到自己团队。</li><li>读到一篇论证严密的文章，你想引用但不确定边界。</li><li>两个都可信的来源给出冲突结论。</li><li>你在评审里想说「这个方案没道理」，但说不清没道理在哪。</li></ul>
+<p><strong>什么时候不用：</strong></p>
+<ul><li>纯粹的事实核查：能查到原始数据就直接查，不必绕假设。</li><li>紧急执行且代价可逆：先做，事后复盘。</li><li>需要无条件服从的规程场景：医疗、航空、消防的标准操作程序不是「参考答案」。</li></ul></div></div><div class="lay"><div class="ltag">执行</div><div class="lbody"><ol><li><strong>抄原句</strong>：把观点原样摘下来，不改写。改写会悄悄替你消掉它最可疑的部分。</li><li><strong>补前提</strong>：逐项问「它成立需要什么条件」——对象是谁、资源多少、时间尺度、权力结构、文化语境。写出至少三条。</li><li><strong>找反例</strong>：什么情况下它会失效？优先找你自己亲历的、而不是网上看来的。</li><li><strong>反过来想一次</strong>：从四式里挑一个——反面（非 A 会怎样）／互补（缺的那半是什么）／共生（A 与它的对立面能否同时成立）／对位（把因果倒过来，是不是结果造成了原因）。</li><li><strong>三句口诀落地</strong>：写三行——它对在哪（一句）／它错在哪（一句）／更好的观点是什么（一句，必须含条件）。</li><li><strong>写成可执行形式</strong>：把第 5 步第三行改写成「如果我面对的是___，我就___；如果是___，我就___」。</li><li><strong>标一个失效信号</strong>：什么现象出现时，说明你的合成版也错了。</li></ol></div></div><div class="lay"><div class="ltag">边界</div><div class="lbody"><ul><li><strong>前提条件</strong>：你得有能力判断前提。新手做这一步会退化成「什么都质疑」，因为他还不知道哪些条件是关键的。</li><li><strong>常见误用</strong>：把「都是参考答案」滑坡成「所有观点一样好」。审校的目的恰恰是排序：三句口诀做完，必须能说出「在这个情境下我更信谁」。</li><li><strong>局限性</strong>：时间成本高。它适合高杠杆决策（选方向、选人、选方法），不适合日常小决定。</li><li><strong>替代方案</strong>：标准操作程序场景直接执行；纯技能学习用示范—模仿，不必先做观念审校。</li><li><strong>最强反驳</strong>：【已查证·非学术】读书社区匿名短评（2025–2026）认为本章六策略「看上去有条理性，实则是自嗨」，并称「作者一直强调要模式学习，我似乎得到的都是碎片」。这条批评指向一个具体风险：<strong>审校框架本身可能只产出「条理整齐的清单」</strong>，因为三句口诀每一步都可以用抽象话填满而不产生任何可检验判断。它对「结论皆有前提」不构成反驳，但对「该框架足以提升判断力」构成实质质疑。冲突强度：程度之争（详见 DIALECTICS.md §5）。</li></ul></div></div><div class="lay"><div class="ltag">关联</div><div class="lbody"><ul><li>[[three-step-answer]] — 先分类，再审校；顺序不可颠倒</li><li>[[interactive-learning]] — 审校需要第二个参考答案，否则只是自问自答</li><li>[[pattern-pyramid]] — 审校的产物应当是一个模式（含条件），不是一句评语</li></ul></div></div></div></div>
+<div class="foldable" id="m3"><button class="fh" type="button" aria-expanded="false" aria-controls="m3-body"><span class="arrow">▶</span><span class="ftitle">互动学习（ICAP · 守破离 · 事前建构）</span><span class="badge">6 维</span></button><div class="fb" id="m3-body"><div class="desc">听课、读书、开会后记不住也用不上时，用互动学习把'被动接收'升到'建构/互动'层级：事前建构、守破离三问、两个参考答案碰撞。用于提升单次输入的吸收深度。<div class="trigrow"><span>听完就忘</span><span>记笔记没用</span><span>互动学习</span><span>ICAP</span><span>守破离</span><span>怎么听讲</span><span>读书方法</span></div></div><div class="lay"><div class="ltag">原文</div><div class="lbody"><blockquote>来自《反向学习：学习力的五项修炼》第二章「参考答案思维方式」，策略三「互动学习」</blockquote>
+<p><strong>来源档位：要点复述，非原文。</strong></p>
+<ul><li>「互动学习指的不是两个人之间的互动，而是两个不同的参考答案之间的互动」（该句在多份独立笔记中以几乎相同的措辞出现，可信度较高）。</li><li>书中引季清华（M. T. H. Chi）的 ICAP 模型：被动 → 主动 → 建构 → 互动，越往上层效果越好（大意）。</li><li>书中把「守破离」改造为三个操作问题：守——它在什么情况下是对的？破——它在什么情况下是错的？离——如果既对又错，我该怎么用？（大意；三问措辞多份笔记一致）</li><li>书中还提到拉波波特法则、芒格法则与「事前建构」（读书或听讲前先独立想出自己的答案，再与书中答案碰撞）（大意）。</li></ul></div></div><div class="lay core"><div class="ltag">释义</div><div class="lbody"><p>判断一次学习是「真发生」还是「发生了但没留下」，有一个很硬的行为指标：<strong>你有没有产出材料里没有的东西</strong>。</p>
+<p>ICAP 的四级，本质是四种行为：</p>
+<p>| 级 | 行为 | 判据 |<br>|----|------|------|<br>| 被动 P | 听、看 | 只有输入 |<br>| 主动 A | 划线、抄录、复述原文 | 有动作，但没新信息 |<br>| 建构 C | 用自己的话解释、比较、预测、画图 | 产出了原文没有的句子 |<br>| 互动 I | 与他人就同一材料共建理解 | 产出了<strong>两个人都没想到</strong>的东西 |</p>
+<p>多数人的「认真听课」停在 A 级：记了满满一页，全是可以回原文查到的话。</p>
+<p>「互动」不必两个人。<strong>事前建构</strong>就是单人的互动：先写自己的答案（3 行），再去读，让两个参考答案在你脑子里打架。这比读完之后再总结有效，因为总结时你已经没有自己的立场了。</p></div></div><div class="lay"><div class="ltag">案例</div><div class="lbody"><ul><li><strong>季清华的 ICAP 研究</strong>：书中据以论证互动学习效果最好、建构次之、主动更次、被动最差（大意）。</li><li><strong>诺奖得主的师徒关系</strong>：获奖者认为学徒期最不重要的是获取实际知识，真正学到的是「得出答案的过程」（大意，笔记转述）。</li><li><strong>费曼与玻尔</strong>：玻尔点名先与费曼单独讨论，因为他是「唯一不怕我的人」——被用来示范「守破离」里的「破」（大意）。</li><li><strong>作者自己的读书速度</strong>：读领导力书两三个小时一本，因为脑中有体系，新内容多为旧结论的新表述——这是「建构级」阅读者才有的现象（大意）。</li></ul></div></div><div class="lay"><div class="ltag">场景</div><div class="lbody"><p><strong>什么时候用：</strong></p>
+<ul><li>一周后回忆一场培训，只剩几个金句。</li><li>开会时全程记笔记，散会后没有贡献任何观点。</li><li>带新人时只会讲「正确做法」，对方记不住也用不上。</li><li>读书笔记全是摘抄，没有一句自己的话。</li></ul>
+<p><strong>什么时候不用：</strong></p>
+<ul><li>纯记忆性材料的<strong>首轮输入</strong>：单词、法条、术语表，先被动记，别急着建构。</li><li>双方没有共同语言时：先补基础词汇，否则「互动」变成各说各话。</li><li>权力高度不对等的场合：下属对上级用「破」，代价可能不是学习成本。</li></ul></div></div><div class="lay"><div class="ltag">执行</div><div class="lbody"><ol><li><strong>事前建构</strong>（读/听之前，5 分钟）：只凭现有认知写下「我认为这个问题的答案是___」，三行以内，允许写错。</li><li><strong>读完不复述，先找差异</strong>：写下「我原来错在哪／漏了哪」，这一句比十页摘抄有用。</li><li><strong>守破离三问</strong>：守——它在什么条件下对？破——什么条件下错？离——在我的场景里怎么改？</li><li><strong>造一个对话者</strong>：找真人讲一遍（最好是不懂这个领域的人），或自己扮演反方。记录对方提出的、你答不上来的那个问题。</li><li><strong>升级判据自检</strong>：你这一步的产出，能不能在原文里查到原句？能查到 → 你还在 A 级，回去重做第 2 步。</li><li><strong>把新问题写进下一轮</strong>：学习不是一次性动作，是「问题—输入—新问题」的循环。</li></ol></div></div><div class="lay"><div class="ltag">边界</div><div class="lbody"><ul><li><strong>前提条件</strong>：双方愿意暴露不同意见。在权力不对等的组织里，「互动」常退化为「附和 + 私下吐槽」，此时这套方法失效。</li><li><strong>常见误用</strong>：把「互动」做成互相认同（两个人一起复述原文，仍然停在 A 级）；把「破」做成抬杠（只找错处，不产出第三句「更好的观点」）。</li><li><strong>局限性</strong>：ICAP 是<strong>行为层面</strong>的粗略分级，它告诉你「做什么动作」，不告诉你「这个内容值不值得学」。判断值不值得，属于聚焦的职责。</li><li><strong>替代方案</strong>：需要权威直接传授时，用示范—模仿—反馈（认知学徒制），不要强推平等对话。</li><li><strong>最强反驳</strong>：Chi &amp; Wylie（2014，<em>Educational Psychologist</em> 49(4): 219–243）在提出 ICAP 时，自己就把它表述为一个<strong>假说（hypothesis）</strong>，并专门用一节讨论其局限与例外条件——所以「互动优于建构、建构优于主动」是趋势性排序，不是铁律。把 ICAP 当作「只要互动就一定学得更好」的保证，超出了原作者的主张。另一条相关但不同层的批评：Rachal（2002，<em>Adult Education Quarterly</em> 52(3): 210–227）指出，「成人学习者本质上不同于学生」这一整类假设历经三十余年实证仍「不确定、且定义混乱」，若把「成人天然更自主、更适合对话式学习」当作前提，则本卡的前提不稳（详见 COUNTERVIEWS.md 主张 2）。</li></ul></div></div><div class="lay"><div class="ltag">关联</div><div class="lbody"><ul><li>[[reference-review]] — 互动的前提是双方都带着审校过的参考答案</li><li>[[four-question-learning]] — 四问中的「想」「变」即建构级动作的最小实现</li><li>[[three-step-answer]] — 「守」这一步的实质是分类：它在哪类情况下对</li></ul></div></div></div></div>
+<div class="foldable" id="m4"><button class="fh" type="button" aria-expanded="false" aria-controls="m4-body"><span class="arrow">▶</span><span class="ftitle">四问学习法（听 · 想 · 变 · 用）</span><span class="badge">6 维</span></button><div class="fb" id="m4-body"><div class="desc">培训后写不出行动项、读书笔记只有摘抄、跨行业跳槽后发现经验带不走时，用听—想—变—用四问把一次输入逼成一个可执行动作。这是全书最可调用的单点工具。<div class="trigrow"><span>四问学习法</span><span>学用脱节</span><span>深层迁移</span><span>举一反三</span><span>读书笔记怎么写</span><span>学完用不上</span></div></div><div class="lay"><div class="ltag">原文</div><div class="lbody"><blockquote>来自《反向学习：学习力的五项修炼》第五章「深层迁移」，含「四问学习法：最重要的学习工具」及「如何听／想／变／用」四节，另设「使用四问学习法的四大误区」与「用四问学习法学习海底捞」</blockquote>
+<p><strong>来源档位：要点复述，非原文。</strong></p>
+<ul><li>迁移 = 旧知识 + 新情境；深层迁移 = 旧的<strong>模式</strong>知识 + 新情境（多份笔记一致）。</li><li>表层迁移是把一个情境表层的碎片知识直接搬到另一个情境；深层迁移是把知识「去情境化」，提炼出碎片背后的模式再应用（大意）。</li><li>四问（多份笔记逐字一致）：<strong>我听到什么？我想到什么？我变成什么？我用到哪里？</strong> 对应四个动作：吸收（能复述概括）→ 联系（与已有模式接上）→ 调整（改成自己的版本）→ 应用（明确具体情境）。</li><li>四大误区：听得太单调、想得不深刻、变得不灵活、用得太宽泛（大意，四误区的名称多份笔记一致）。</li><li>书中为「听」列七技巧、「想」列五技巧、「变」列十技巧、「用」列三技巧（据读书笔记；具体清单未获全文，本卡不复述，改用可执行的自建步骤）。</li></ul></div></div><div class="lay core"><div class="ltag">释义</div><div class="lbody"><p>四问不是流程装饰，是<strong>四个必须留下产物的动作</strong>。每一问都有硬判据：</p>
+<p>| 问 | 动作 | 硬判据（做不到就是没做到） |<br>|----|------|--------------------------|<br>| 我听到什么 | 吸收 | 合上材料，用自己的话写三行，且不出现原文的整句 |<br>| 我想到什么 | 联系 | 能说出「这和我已知的___是同一条模式」，并写出那条旧模式 |<br>| 我变成什么 | 调整 | 至少改三处：换对象、换场景、加条件 |<br>| 我用到哪里 | 应用 | 写出「如果___（触发信号），我就___（具体动作）」，含时间 |</p>
+<p>第三问是全书最容易被跳过、也最关键的一步。多数人的迁移失败不是「没听懂」，而是「听懂了但没变形」——直接把别人的做法搬到自己的场景，这就是「学而乱用」。</p>
+<p>第四问的敌人是「宽泛」。写成「用到一切人际沟通中」等于没写；必须窄到一个能在一周内发生的情境。</p></div></div><div class="lay"><div class="ltag">案例</div><div class="lbody"><ul><li><strong>海底捞发眼镜布的三次迁移</strong>（全书最完整的示范，大意）：</li><li>流程视角 → 模式「顾客有不便，我就消灭它」→ 迁移到自己的服务环节；</li><li>特色视角 → 模式「全过程好吃」→ 迁移到产品设计；</li><li>差异化视角 → 模式「弱化服务，突出产品」→ 迁移到战略取舍。</li></ul>
+<p>同一素材、三种「想→变→用」，得出三条不同的可执行路径。</p>
+<ul><li><strong>反面案例</strong>：另一家店照搬「发眼镜布」，因缺乏背后的模式支撑而失败——表层迁移的典型样本（大意）。</li><li><strong>九组编号示例</strong>：书中以八分饱、舒适区、用户界面、摄影师棒球队、张文江语录、尼采语录等素材反复演练四问（大意；各例细节未获全文，本卡不逐一复述）。</li><li><strong>诺奖得主师徒案例</strong>：被用来说明「学到的是得出答案的过程」而非答案本身（大意）。</li></ul></div></div><div class="lay"><div class="ltag">场景</div><div class="lbody"><p><strong>什么时候用：</strong></p>
+<ul><li>参加完培训、听完一场分享，要交「学习心得」或「行动项」。</li><li>读完一本书，笔记里只有划线。</li><li>跨行业跳槽/转岗，需要把旧经验搬到新场景。</li><li>你要把某个外部案例讲给团队，并让它落地。</li></ul>
+<p><strong>什么时候不用：</strong></p>
+<ul><li>纯信息获取：查一个数字、确认一个日期，不必四问。</li><li>已经熟练的重复性动作：做熟了的事再走四问是浪费时间。</li><li>材料本身质量太差：四问会把垃圾加工得更精致，先判断值不值得学（那是聚焦的事）。</li></ul></div></div><div class="lay"><div class="ltag">执行</div><div class="lbody"><ol><li><strong>听（吸收）</strong>：合上材料，写三行自己的话。禁止抄原句；写不出来 → 回去重听，不是硬写。</li><li><strong>想（联系）</strong>：写出「这和我已知的___是同一条模式」。找不到对应物时，允许写「我没有对应物」，并记下这个空缺——空缺本身就是下一步该学的东西。</li><li><strong>想（提炼）</strong>：把材料里的具体名词去掉，写成一句「当___时，___导致___」。这句就是模式。</li><li><strong>变（三改）</strong>：改对象（换成我面对的人/团队）、改场景（换成我的行业）、加条件（在什么前提下才成立）。三改缺一，不算变形。</li><li><strong>变（写成自己的版本）</strong>：用一句话写「我的版本是___」，必须和原版明显不同，否则你只是复述。</li><li><strong>用（执行意图）</strong>：写「如果___，我就___」，触发信号要具体到能被自己观察到（「下次例会有人提反对意见时」而不是「沟通时」）。</li><li><strong>用（预设复盘）</strong>：定一个回看时间点（一周后），只问三件事：用了几次？哪次失败？失败说明「变」这一步改错了什么？</li><li><strong>失败时回到第 4 步</strong>，不要回到第 1 步——绝大多数迁移失败发生在「变」，不在「听」。</li></ol></div></div><div class="lay"><div class="ltag">边界</div><div class="lbody"><ul><li><strong>前提条件</strong>：你脑中已有可对接的模式。新手「想」这一步会空转，因为无处可连——这也解释了为什么四问对老手效果明显、对新手近乎无效。新手应先积累案例量，再回来用四问。</li><li><strong>常见误用</strong>：第四问写成宏大承诺（「以后所有会议都这样」）；把四问答成一篇漂亮的总结（四问的产物必须是<strong>动作</strong>，不是文章）。</li><li><strong>局限性</strong>：四问只管「怎么把一个输入转成动作」，不管「该输入什么」。它不能替代聚焦，也不能替代领域知识。</li><li><strong>替代方案</strong>：纯操作技能用示范—练习—反馈；需要长期行为改变时用习惯设计与环境改造，四问只能启动第一步。</li><li><strong>最强反驳</strong>：Barnett &amp; Ceci（2002，<em>Psychological Bulletin</em> 128(4): 612–637）对百年迁移研究的结论是：迁移能否发生取决于<strong>九个维度上的距离</strong>（知识领域、物理情境、时间情境、功能情境、社会情境、模态等），因此「估计一个单一的远迁移效应量是误导性的」；证据表明「在某些条件下迁移是实质性的，但许多关键问题的关键条件仍未被检验」。→ 这条批评打中要害：<strong>四问管「怎么提炼模式」，不管「迁移的物理条件」</strong>。如果新模式与旧情境在情境线索上几乎没有重叠，再怎么提炼也迁移不过去。真正提高迁移率的做法是增加<strong>多情境练习</strong>与线索重叠，而不是把模式提炼得更漂亮。这也是本卡 E 段第 6 步要求「触发信号具体到可观察」的原因——它是在人为制造情境线索。</li></ul></div></div><div class="lay"><div class="ltag">关联</div><div class="lbody"><ul><li>[[pattern-pyramid]] — 四问第 2–3 步的产物就是模式；两层是同一件事的不同粒度</li><li>[[unlearning-audit]] — 四问是「学用脱节」这个坏习惯的替代动作</li><li>[[interactive-learning]] — 想不出模式时，找一个真人对话，比自己空想有效</li><li>[[three-step-answer]] — 「变」的实质是重新分类：在什么情况下用哪个版本</li></ul></div></div></div></div>
+<div class="foldable" id="m5"><button class="fh" type="button" aria-expanded="false" aria-controls="m5-body"><span class="arrow">▶</span><span class="ftitle">聚焦六维筛选</span><span class="badge">6 维</span></button><div class="fb" id="m5-body"><div class="desc">当学习清单越拉越长、收藏夹里全是没学完的课、方向摇摆时，用六个镜头（不变/实用/擅长/专题/作者/样本）把清单筛到只剩少数几项，并设 90 天护栏。<div class="trigrow"><span>学不完</span><span>该学什么</span><span>知识焦虑</span><span>聚焦</span><span>什么都想学</span><span>方向太多</span></div></div><div class="lay"><div class="ltag">原文</div><div class="lbody"><blockquote>来自《反向学习：学习力的五项修炼》第三章「聚焦」，含「聚焦：为什么与怎么做」与策略一至策略六</blockquote>
+<p><strong>来源档位：要点复述，非原文。</strong></p>
+<ul><li>「如果说卓有成效有唯一秘诀的话，那就是聚焦」（该句在多份独立笔记中一致出现，可信度较高）。</li><li>两个理由：聚焦带来擅长；聚焦带来学习的马太效应——知识多的人知识会越来越多（大意）。</li><li>六个策略（多份笔记一致）：聚焦不变（底层规律）、聚焦实用（对自己有用的内容）、聚焦擅长（发展长板）、聚焦专题（围绕一个具体问题整合跨学科知识）、聚焦作者（深入读同一作者的全部著作）、聚焦样本（深入分析一个能代表一类的样本）。</li><li>本章口诀：「对我来说，有少数知识比其他知识更重要。我要聚焦的少数知识是什么？」（多份笔记一致）</li><li>附属方法：苏东坡学习法（每次阅读只聚焦一个主题，反复读同一经典）；「小偷式」学习法（一本书拿走 3 点即可）；「大盗式」学习法（一个专题读上百本，建自己的体系）。</li></ul></div></div><div class="lay core"><div class="ltag">释义</div><div class="lbody"><p>聚焦常被理解成「少学」。更准确的说法是：<strong>用同一把尺子反复筛，直到筛不下去为止</strong>。这把尺子有六个镜头，它们不是六个并列的建议，而是六次独立的筛选，每次都问「这一项，在这个镜头下留不留」。</p>
+<p>六个镜头的分工：</p>
+<p>| 镜头 | 筛什么 | 追问 |<br>|------|--------|------|<br>| 不变 | 筛掉时效性内容 | 十年后这条还成立吗？ |<br>| 实用 | 筛掉「与我无关的有趣」 | 它对着我哪个真实问题？ |<br>| 擅长 | 筛掉补短板的诱惑 | 它是在加长板，还是在填坑？ |<br>| 专题 | 筛掉无归宿的碎片 | 它服务哪个具体问题？ |<br>| 作者 | 筛掉「什么都读一点」 | 这个人的其他著作我读了吗？ |<br>| 样本 | 筛掉「看了很多、一个没吃透」 | 我有没有吃透过一个？ |</p>
+<p>「马太效应」这一条是本书对聚焦最有说服力的论证：已有体系的人吸收新知识更快，所以聚焦的收益是<strong>复利</strong>而非线性——这也解释了为什么「什么都学一点」的人越学越慢。</p></div></div><div class="lay"><div class="ltag">案例</div><div class="lbody"><ul><li><strong>赫伯特·西蒙</strong>：19 岁时确定「人是如何决策的」这一专题，此后涉足政治学、管理学、经济学、计算机科学、心理学，全部围绕这一个问题（大意）——这是「聚焦专题」的范例。</li><li><strong>苏东坡「八面受敌」读书法</strong>：每读一遍只带一个主题切入，反复读同一部经典（大意，书中改称「苏东坡学习法」）。</li><li><strong>乔布斯砍产品线</strong>与<strong>巴菲特 25 选 5</strong>：笔记中以「划掉 7 个只做 3 件」「25 个目标里只留 5 个，其余不惜代价避开」转述（此类数字为读书笔记转述，未见原书页码，仅作示例，勿当原始数据引用）。</li><li><strong>作者读领导力书 2–3 小时一本</strong>：因为领域内已有体系，新书多是旧结论的新表述（大意）——马太效应的亲历证据。</li></ul></div></div><div class="lay"><div class="ltag">场景</div><div class="lbody"><p><strong>什么时候用：</strong></p>
+<ul><li>收藏夹里有 50 门课、书架上 30 本没拆封的书。</li><li>年度计划写「读 50 本书」「学 3 个新技能」，年底一事无成。</li><li>职业方向在两条路之间摇摆超过三个月。</li><li>你所在领域正在发生技术变化，你不知道该跟还是不该跟。</li></ul>
+<p><strong>什么时候不用：</strong></p>
+<ul><li>探索期：还不知道自己擅长什么时，「聚焦擅长」是循环论证——先采样 3–6 个月再筛。</li><li>必须补的合规/安全/财务常识：这些短板不补会出事，属于「不能聚焦掉」的项。</li><li>团队负责人：个人可以聚焦，团队不能——团队需要覆盖度。</li></ul></div></div><div class="lay"><div class="ltag">执行</div><div class="lbody"><ol><li><strong>摊开清单</strong>：把当前所有在学、想学、已买未学的东西写在一张纸上，一行一项，不排序。</li><li><strong>六个镜头各过一遍</strong>：每个镜头只留 1 项（同镜子内必须做减法）。每个留下的写一句「为什么是它」。</li><li><strong>冲突处置</strong>（此步为蒸馏者建议，非原书内容）：若六项互不相同，优先级按 实用 &gt; 专题 &gt; 擅长 &gt; 不变 &gt; 样本 &gt; 作者——因为「实用」直接连着你当下的真实问题，「作者」的成本最高。</li><li><strong>设 90 天护栏</strong>：写明「接下来 90 天我只做___，其他一律进备忘清单，不投入时间」。</li><li><strong>每季度只允许换一个镜头</strong>：一次全换等于没聚焦。</li><li><strong>给「不变」镜头单独做一件事</strong>：挑一本领域经典，制定重读计划（同一本，读三遍，每次一个主题）。</li><li><strong>验收</strong>：90 天后问「我在这一个方向上，是否已经能说出别人不知道的三件事」。说不出 → 不是聚焦失效，是你选的那一项不够「实用」。</li></ol></div></div><div class="lay"><div class="ltag">边界</div><div class="lbody"><ul><li><strong>前提条件</strong>：你至少有一个真实问题在做锚。没有锚的聚焦会变成「只读一本书」的教条，一年后视野极窄。</li><li><strong>常见误用</strong>：用「聚焦擅长」逃避必须补的短板；把「聚焦」做成「只读经典、拒绝新东西」，最后锁死在过时框架里。</li><li><strong>局限性</strong>：在环境剧变期，「聚焦不变」会失效——你聚焦的那条「不变规律」可能正在被技术前提的变化推翻。判别信号：同行里最懂那条规律的人，最近是否也开始改口。</li><li><strong>替代方案</strong>：探索期用广度采样（多领域短期试水），把聚焦推迟到有信号之后；团队层面用能力矩阵补覆盖度。</li><li><strong>最强反驳</strong>：Sala &amp; Gobet（2017，<em>Current Directions in Psychological Science</em> 26(6): 515–520）综合象棋、音乐、工作记忆训练三项元分析后结论：<strong>远迁移很少发生</strong>，且效应量与实验设计质量呈负相关。若「聚焦 → 专精 → 迁移」这条链条的末端（迁移）本身很弱，那么聚焦的收益就主要限于<strong>本领域内</strong>，本书对「聚焦后能举一反三到别处」的承诺被高估。另一条量级上的反驳：Macnamara、Hambrick 与 Oswald（2014，<em>Psychological Science</em> 25(8): 1608–1618，88 项研究、样本逾 1.1 万人）发现刻意练习平均只解释 12% 的表现差异，职业领域不足 1%——说明「在一个方向上持续投入」与「卓越」之间的因果强度远低于直觉，聚焦是必要条件而非充分条件。</li></ul></div></div><div class="lay"><div class="ltag">关联</div><div class="lbody"><ul><li>[[unlearning-audit]] — 聚焦是「碎片化学习」这个坏习惯的替代动作</li><li>[[pattern-pyramid]] — 聚焦的对象应当是「模式」，不是「信息」</li><li>[[pattern-tree]] — 聚焦专题给出树干，模式树给出结构</li></ul></div></div></div></div>
+<div class="foldable" id="m6"><button class="fh" type="button" aria-expanded="false" aria-controls="m6-body"><span class="arrow">▶</span><span class="ftitle">模式化学习金字塔</span><span class="badge">6 维</span></button><div class="fb" id="m6-body"><div class="desc">当你能举出一堆案例却说不出规律、PPT 全是现象、换行业后经验失灵时，用模式化学习金字塔判断自己停在哪一层，并把碎片提炼成带条件的模式句。<div class="trigrow"><span>提炼不出规律</span><span>专家和新手的区别</span><span>模式化学习</span><span>学习金字塔</span><span>只会堆案例</span><span>碎片化</span></div></div><div class="lay"><div class="ltag">原文</div><div class="lbody"><blockquote>来自《反向学习：学习力的五项修炼》第四章「模式化学习」，含「模式化学习的重要性」「模式化学习金字塔」与策略一至三</blockquote>
+<p><strong>来源档位：要点复述，非原文。</strong></p>
+<ul><li>公式：<strong>学习 = 模式 + 碎片</strong>（多份笔记一致）。</li><li>模式知识是把握了事物的共性、整体与本质的「一套」知识体系；碎片知识只呈现事物的个性、部分与表象，是「单点」知识（大意，多份笔记措辞接近）。</li><li>金字塔五层（多份笔记一致）：零学习 → 单点碎片 → 多点碎片 → 模式识别 → 模式迁移。多数人停在「多点碎片」。</li><li>模式五种类型：描述模式、分析模式、解释模式、预测模式、行动模式；书中强调重点学分析与解释模式（大意）。</li><li>策略一「中距离学习模式」：向高处调整（不盯具体工作，考虑更具一般性的问题）、向远处调整（跳出本领域）（大意）。</li><li>本章口诀：「如果这只是碎片，它背后那个在其他场合、其他时候同样成立的不变的模式是什么？」（多份笔记一致）</li></ul></div></div><div class="lay core"><div class="ltag">释义</div><div class="lbody"><p>这条方法论的价值不在「模式很重要」（这是常识），而在它给了一个<strong>可自测的层级</strong>和一条<strong>可执行的提炼动作</strong>。</p>
+<p>自测：拿你最近学的三件事，分别问「它属于哪一层」。</p>
+<p>| 层 | 你的状态 | 典型话术 |<br>|----|----------|----------|<br>| 零学习 | 什么都没留下 | 「那个课挺有意思的」 |<br>| 单点碎片 | 记住一个点 | 「海底捞发眼镜布」 |<br>| 多点碎片 | 记住很多点，但互不相连 | 「我学了五个案例」 |<br>| 模式识别 | 点与点之间连上了 | 「发眼镜布背后是：顾客有不便，我就消灭它」 |<br>| 模式迁移 | 把模式用到别的领域 | 「银行排队也是同一件事：等候中的不便」 |</p>
+<p>绝大多数人的问题不是「学得少」，是<strong>卡在第三层还自以为在第四层</strong>——因为「能列举五个案例」在感觉上很像「懂了」。</p>
+<p>五类模式里，描述型最不值钱（它只是把现象换个说法），解释型最值钱（它给出因果，因而能预测）。把描述型冒充解释型，是最常见的失败模式。</p></div></div><div class="lay"><div class="ltag">案例</div><div class="lbody"><ul><li><strong>专家—新手实验</strong>：书中引用认知科学关于专家与新手的经典实验（如按原理而非表面特征给物理题分类、棋手对局面的记忆优势），论证专家掌握的是模式知识而新手只有碎片（大意；本卡不复述具体实验数据）。</li><li><strong>用模式分析碎片的三组案例</strong>：海底捞致歉信、任正非语录、射稽唱歌——同一套模式用于解读三种不同材料（大意）。</li><li><strong>任正非语录</strong>：被用来示范「一句话背后可以提炼出什么模式」（大意）。</li><li><strong>作者读领导力书的速度</strong>：2–3 小时一本，因为新内容多是已有模式的新表述（大意）。</li></ul></div></div><div class="lay"><div class="ltag">场景</div><div class="lbody"><p><strong>什么时候用：</strong></p>
+<ul><li>复盘时你只能说出「这次做得不错/不好」，说不出为什么。</li><li>述职材料里全是过程描述，没有一条可复用的判断。</li><li>换行业/换职能后，发现原有经验「带不走」。</li><li>你在给下属讲案例，讲完他记住了故事，没记住道理。</li></ul>
+<p><strong>什么时候不用：</strong></p>
+<ul><li>材料本身没有规律：一次性事件、独特的历史情境。</li><li>首轮记忆阶段：学解剖学名词、学外语词汇时，先记事实，别急着提炼模式（没有素材，提炼出来的是臆想）。</li><li>只有 1 个样本时：那是「个例」，不是「模式」。</li></ul></div></div><div class="lay"><div class="ltag">执行</div><div class="lbody"><ol><li><strong>凑够样本</strong>：收集 3–5 个同类片段（同一类问题在不同场合的表现），少于 3 个不要做。</li><li><strong>横向找共性</strong>：问「它们共同成立的条件是什么」——注意问的是条件，不是共同点。「都成功了」不是条件。</li><li><strong>写成模式句</strong>：格式固定为「当___时，___会导致___，因为___」。四段缺一段就还没提炼完。</li><li><strong>判定类型</strong>：它是描述（是什么）／分析（由什么构成）／解释（为什么）／预测（接下来会怎样）／行动（该做什么）？只有描述型 → 回去补因果。</li><li><strong>中距离调整</strong>：把模式句里的行业名词删掉，看还成立不成立（向高处）；再拿它去套一个完全不相干的领域（向远处）。两次都成立，才叫模式。</li><li><strong>回读原样本</strong>：用新模式重新解释原来那 3–5 个片段，找出解释不了的那个。解释不了的那个，是模式需要修的地方。</li><li><strong>存进模式库</strong>：一条一行，标注它属于哪一类、在什么条件下失效。</li></ol></div></div><div class="lay"><div class="ltag">边界</div><div class="lbody"><ul><li><strong>前提条件</strong>：至少 3 个同类样本 + 你对这个领域有基础事实知识。模式需要素材喂养，素材不足时提炼出的是漂亮空话。</li><li><strong>常见误用</strong>：把「总结」当「模式」——总结是把多个碎片压成一段话，模式是给出条件与因果。判别：你的模式句能不能预测一个还没发生的情况？不能，就是总结。</li><li><strong>局限性</strong>：不能替代领域知识量。模式化学习是「组织方式」的优化，不是「知识量」的替代；两者是乘法关系，任一项为零则结果为零。</li><li><strong>替代方案</strong>：纯流程性、步骤明确的工作用清单（checklist）；需要精确复现的操作用手册，不需要模式。</li><li><strong>最强反驳</strong>：模式／组块研究的另一面正好削弱本书的推论。Chase &amp; Simon（1973）与 Gobet &amp; Simon（1996）的组块理论与模板理论表明：专家的优势高度依赖<strong>领域特定</strong>的巨量组块（国际象棋大师掌握数万级别的有意义棋形），而这类知识「很难迁移到其他领域」（Sala &amp; Gobet 2017 综述，<em>Current Directions in Psychological Science</em> 26(6): 515–520）。换言之：<strong>「能看见模式」很可能是长期领域沉浸的结果，而不是一项可以先学会、再拿去任何领域使用的方法</strong>。本书把「模式化学习」当作跨领域通用能力来教，这一步在实证上最为脆弱——它可能把「专家的产物」误当成了「成为专家的方法」。</li></ul></div></div><div class="lay"><div class="ltag">关联</div><div class="lbody"><ul><li>[[pattern-tree]] — 单个模式之后，如何长成结构</li><li>[[focus-six-lenses]] — 聚焦决定喂给模式的是什么素材</li><li>[[four-question-learning]] — 四问中的「想」，就是本卡的第 2–3 步</li><li>[[unlearning-audit]] — 「碎片化学习」这个坏习惯的解药</li></ul></div></div></div></div>
+<div class="foldable" id="m7"><button class="fh" type="button" aria-expanded="false" aria-controls="m7-body"><span class="arrow">▶</span><span class="ftitle">模式树与模式树林</span><span class="badge">6 维</span></button><div class="fb" id="m7-body"><div class="desc">当笔记里堆了几百条互不相连的卡片、面试讲不出体系、写方案只会东拼西凑时，用模式树（一个树干+挂在树干上的模式）与模式树林（跨域同一个模式）把模式结构化。<div class="trigrow"><span>知识体系</span><span>卡片盒</span><span>串不起来</span><span>模式树</span><span>比较两个模式</span><span>跨学科</span></div></div><div class="lay"><div class="ltag">原文</div><div class="lbody"><blockquote>来自《反向学习：学习力的五项修炼》第四章「模式化学习」，策略四「用模式比较模式」、策略五「搭建一棵模式树」、策略六「建立模式的树林」</blockquote>
+<p><strong>来源档位：要点复述，非原文。</strong></p>
+<ul><li>策略四「用模式比较模式」三步：<strong>存同</strong>（找两个模式的相似处）→ <strong>求异</strong>（比较差异，书中强调这一步是重点）→ <strong>取舍</strong>（决定留下哪一个，或合并、或分情境使用）（大意）。</li><li>策略五「搭建一棵模式树」：找到「树干」，把相关模式围绕树干组织起来（大意）。</li><li>策略六「建立模式的树林」：建立跨学科的模式框架——许多貌似不相干的不同领域的模式，本质上是同一个模式（大意）。</li><li>书中的跨域例子：欧姆定律的形式变形被用于类比其他领域；「熟悉 + 意外 = 注意」被视为跨领域共享的同一个模式（大意，据读书笔记，未核对原文页码）。</li></ul></div></div><div class="lay core"><div class="ltag">释义</div><div class="lbody"><p>模式化的下一步是<strong>结构化</strong>。单条模式的价值有限，因为你在真实场景里需要的不是「一条道理」，而是「在若干条道理之间选一条」。</p>
+<p>三个动作构成一套：</p>
+<ol><li><strong>比较</strong>：把两条模式放在一起，先存同（它们其实在说同一件事吗），再求异（在哪个变量上分岔），最后取舍。<strong>求异是重点</strong>——因为存同容易让人产生「我都懂了」的错觉，而真正决定用法的是差异。</li><li><strong>树</strong>：定一个树干（你反复要回答的那个问题），把模式挂上去。挂不上的进「待定区」，不要硬塞。树干错了，整棵树都是错的。</li><li><strong>树林</strong>：跨领域找同一个模式。这一步的收益是<strong>迁移的捷径</strong>——如果 A 领域的模式和 B 领域的模式是同一个东西，那么你在 A 学到的东西可以直接在 B 用（这正是本书对「深层迁移」的乐观来源，也是它最受质疑的地方，见 B 段）。</li></ol></div></div><div class="lay"><div class="ltag">案例</div><div class="lbody"><ul><li><strong>三个石匠的故事</strong>（德鲁克）：作者用管理者三大能力、团队种类、工作态度、时间幅度等多个维度反复分析同一个案例——示范「同一素材、多种模式」的读法（大意，读书笔记转述）。</li><li><strong>欧姆定律的变形</strong>：I = U/R 及其变形式被用来类比其他领域的关系结构（大意）。</li><li><strong>「熟悉 + 意外 = 注意」</strong>：被举为跨学科共享同一个模式的例子——心理学、传播、产品设计都在用它（大意）。</li><li><strong>海底捞案例的三种读法</strong>：流程视角、特色视角、差异化视角——同一案例挂在三棵不同的树上，得出三种可迁移的模式（大意）。</li></ul></div></div><div class="lay"><div class="ltag">场景</div><div class="lbody"><p><strong>什么时候用：</strong></p>
+<ul><li>笔记软件里有 300 条以上卡片，互相不连，搜得到但用不上。</li><li>面试/述职被问「你的方法论是什么」，只能报书名和人名。</li><li>两个方法论你都懂，但不知道什么时候用哪个。</li><li>你在一个新领域，想把旧领域的经验搬过来（此时最需要「树林」）。</li></ul>
+<p><strong>什么时候不用：</strong></p>
+<ul><li>卡片少于 30 条：先积累，急着搭树会把分类固化在无知状态。</li><li>树干还没定：没有真实问题就搭树，搭出来的是「书的目录」，不是你的体系。</li><li>需要快速交付时：结构化是慢功夫，赶工时用清单。</li></ul></div></div><div class="lay"><div class="ltag">执行</div><div class="lbody"><ol><li><strong>定树干</strong>：用一句话写「我要反复回答的问题是___」。判据：这句话要能接住至少 10 条你已有的卡片。接不住 → 换一句。</li><li><strong>挂钩</strong>：把已有模式逐条挂到树干上，每条注明「它回答树干的哪一面」。挂不上的进「待定区」，不允许硬塞。</li><li><strong>两两比较</strong>：随便挑两条同分支的，走存同 → 求异 → 取舍。求异时至少写出一个「在___变量上不同」。</li><li><strong>做减法</strong>：同一分支下若有三条以上模式意思相近，合并成一条，并写明合并后丢失了什么（这一步防止过度概括）。</li><li><strong>分支超载检查</strong>：树干下超过 7 个分支，多半是树干定得太宽。把树干收窄一次。</li><li><strong>每月一次跨域找同</strong>：从一个你不懂的领域拿一条模式，问「它跟我树干上的哪一条是同一个东西」。找到 → 记录映射；找不到 → 记录「为什么不同」，这本身也是收获。</li><li><strong>标失效条件</strong>：每条模式旁写一句「它在___情况下不成立」，否则它会变成教条。</li></ol></div></div><div class="lay"><div class="ltag">边界</div><div class="lbody"><ul><li><strong>前提条件</strong>：树干必须来自你正在处理的真实问题，不是知识分类。「管理学」不是树干，「为什么我的团队执行力上不去」才是。</li><li><strong>常见误用</strong>：把书的目录当树干（那是作者的树）；把「存同」当结论（发现相似就宣布「本质一样」，跳过求异，于是把两个不同的东西混成一个）。</li><li><strong>局限性</strong>：过早搭树会锁死分类。一旦树干定错，后面挂得越多越难改——所以树干要允许一年改一次，并保留旧版。</li><li><strong>替代方案</strong>：卡片量少时用「问题清单」代替树（列出 10 个你真在解决的问题，比一棵空树有用）；需要快速检索时用标签，不需要层级。</li><li><strong>最强反驳</strong>：未检索到针对「模式树／模式树林」这一命名的公开反批评（检索范围：中英文 WebSearch，含书评、读书笔记与学术检索；该命名为作者自创术语，学界尚无专门讨论）。可参照的一般性质疑仅作提示、不冠人名：知识结构化工具（知识树、思维导图）在学习研究中的增益并不稳定，其效果高度依赖是否伴随主动检索与测试——即「把结构画出来」本身不等于「掌握了结构」。因此本卡的 E 段把「回读原样本、找解释不了的那个」列为必要步骤，而不是只要求画完图。</li></ul></div></div><div class="lay"><div class="ltag">关联</div><div class="lbody"><ul><li>[[pattern-pyramid]] — 先有单条模式，才谈得上搭树</li><li>[[focus-six-lenses]] — 「聚焦专题」给出树干，「聚焦作者」给出分支</li><li>[[four-question-learning]] — 「想」这一步的产物应当挂到树上，否则下次还得重想</li></ul></div></div></div></div>
+</div>
+<div class="section" id="s-compare">
+<h2 class="section-title">心智模型对比</h2>
+<div class="compare-grid"><div class="compare-box old"><h4>学校的隐性课程</h4><ul><li>所有问题都有标准答案，答案在老师手里</li><li>短板必须补齐，要全面发展</li><li>知识是收藏品，收得越多越好</li><li>学完就算学会，用不用是以后的事</li><li>评价看结果：分数、排名、结论</li></ul></div><div class="compare-box new"><h4>成年人的学习方式</h4><ul><li>重要问题只有参考答案，要按情况给条件解</li><li>发展长板，短板靠协作与工具补</li><li>少数知识比多数知识更重要，要聚焦</li><li>学没学会，只看有没有变成动作</li><li>评价看过程：能不能还原出因果</li></ul></div></div>
+</div>
+<div class="section" id="s-scenario">
+<h2 class="section-title">你的处境 → 打开哪个技能</h2>
+<table class="data-table"><thead><tr><th>你的处境</th><th>打开哪个技能</th><th>它替你解决什么</th></tr></thead><tbody><tr><td>换岗/晋升后，过去那套管不动了</td><td>unlearning-audit</td><td>把「感觉不对」变成一条可替换的信念</td></tr><tr><td>同一类错误第三次出现在你手上</td><td>unlearning-audit</td><td>定位是哪条旧习惯在重复触发</td></tr><tr><td>两个专家给了相反建议，不知道信谁</td><td>three-step-answer</td><td>把「谁对」改写成「各自在哪类情况下对」</td></tr><tr><td>要给建议，但怕这个建议在别处害人</td><td>three-step-answer</td><td>输出带条件的参考答案，而不是结论</td></tr><tr><td>想照搬大厂方法论/名人做法</td><td>reference-review</td><td>补前提、找反例、合成自己的版本</td></tr><tr><td>读完一篇论证严密的文章，想引用又不敢</td><td>reference-review</td><td>三道审校，标出它的失效边界</td></tr><tr><td>听完课一周后什么都想不起来</td><td>interactive-learning</td><td>从「抄录级」升到「建构级」</td></tr><tr><td>开会只会记笔记，散会没有贡献观点</td><td>interactive-learning</td><td>事前建构 + 守破离，让你带着立场进场</td></tr><tr><td>收藏夹 300 条，一门课都没学完</td><td>focus-six-lenses</td><td>六镜头筛到少数几项，设 90 天护栏</td></tr><tr><td>年度计划写「读 50 本书」，年底归零</td><td>focus-six-lenses</td><td>把「多」换成「深」，给经典安排重读</td></tr><tr><td>能列一堆案例，讲不出方法论</td><td>pattern-pyramid</td><td>定位卡在第几层，提炼出带条件的模式句</td></tr><tr><td>复盘只会说「这次做得不错」</td><td>pattern-pyramid</td><td>把过程描述换成因果句</td></tr><tr><td>笔记软件里 400 条卡片互相不连</td><td>pattern-tree</td><td>定树干、挂钩、做存同求异</td></tr><tr><td>面试被问「你的方法论是什么」，只能报书名</td><td>pattern-tree</td><td>把散落经验长成一棵能讲的树</td></tr><tr><td>培训后要交三条行动项，写不出来</td><td>four-question-learning</td><td>四问逼出一个一周内能做的动作</td></tr><tr><td>跨行业跳槽，旧经验带不走</td><td>four-question-learning</td><td>判断是表层迁移还是深层迁移，再决定搬什么</td></tr></tbody></table>
+</div>
+<div class="section" id="s-counterviews">
+<h2 class="section-title">对立观点：有没有人反对</h2>
+<p class="table-note">检索时间 2026-11-24 ｜ 工具 WebSearch（中英文）｜ 待检验主张 5 条 ｜ 命中对立观点 8 条（已查证 5、已查证·非学术 2、未证实 1）｜ 检索式：unlearning critique / organizational unlearning empirically unwarranted / far transfer meta-analysis / deliberate practice meta-analysis / extinction not unlearning / andragogy critique / ICAP limitations / 书评 批评</p>
+<div class="cv"><div class="cv-claim"><span class="st definition">⚪ 定义冲突</span>成年人学习的首要任务不是增加新知识，而是去除错误的、过时的旧知识<span class="cv-chain">（第一章「反向学习」）</span></div><div class="cv-view"><div class="cv-gist"><span class="ev verified">已查证</span>心理学从未提供「先删除旧知识」的实证支持；真实过程是「搁置」而非「删除」</div><div class="cv-meta">出处：<a href="https://doi.org/10.1177/1350507615624079" target="_blank" rel="noopener noreferrer">Howells, J. &amp; Scholderer, J.，《Forget Unlearning?》，Management Learning 47(4): 443-463，2016</a>　·　作者未回应</div><div class="cv-why"><strong>对立缘由</strong>：定义不同：书里的「去除」指清掉，实验心理学能证明的只是新学习压制旧学习。对方复核了 unlearning 被引入管理学的全部链条，结论是概念本身缺实证基础。</div><div class="cv-verdict"><strong>判断</strong>：在「删除」的字面意义上反方成立；在「替换」的操作意义上本书成立——书自己的「用加法做减法」与反方相容。</div></div><div class="cv-view"><div class="cv-gist"><span class="ev verified">已查证</span>消退不等于遗忘：旧学习会随情境回归</div><div class="cv-meta">出处：<a href="https://doi.org/10.1101/lm.78804" target="_blank" rel="noopener noreferrer">Bouton, M. E.，《Context and behavioral processes in extinction》，Learning &amp; Memory 11(5): 485-494，2004</a>　·　作者未回应</div><div class="cv-why"><strong>对立缘由</strong>：机制层面：旧学习只是被情境性压制，回到原情境即复发。直接挑战「想通了就不会再犯」的假设。</div><div class="cv-verdict"><strong>判断</strong>：反方成立且对实践有直接含义：反向学习必须绑定情境提醒，否则一回原环境就复发。</div></div></div>
+<div class="cv"><div class="cv-claim"><span class="st condition">🟠 条件冲突</span>成年人的学习机制与学校学习是两套不同的机制，因此要先「去学校化」<span class="cv-chain">（前言「为成人而写的学习书」／第一章「来自学校的隐性课程」）</span></div><div class="cv-view"><div class="cv-gist"><span class="ev verified">已查证</span>「成人学习者质上不同于学生」这类假设，三十余年实证仍不确定且定义混乱</div><div class="cv-meta">出处：<a href="https://doi.org/10.1177/0741713602052003004" target="_blank" rel="noopener noreferrer">Rachal, J. R.，《Andragogy's Detectives》，Adult Education Quarterly 52(3): 210-227，2002</a></div><div class="cv-why"><strong>对立缘由</strong>：证据强度不同：书里靠经验观察与案例，反方要求可操作化定义下的实证，而这一检验长期缺席。反方称该理论「往好里说是碎片化的信仰文章」。</div><div class="cv-verdict"><strong>判断</strong>：打折而非否定：可用的弱版本是「任务目标不同」，不是「认知机制不同」。</div></div></div>
+<div class="cv"><div class="cv-claim"><span class="st condition">🟠 条件冲突</span>聚焦少数领域优于全面发展，补短板在大学之后基本应被抛弃<span class="cv-chain">（第三章「聚焦」／第一章「坏习惯二」）</span></div><div class="cv-view"><div class="cv-gist"><span class="ev verified">已查证</span>远迁移很少发生，因此「专精之后能举一反三」被高估</div><div class="cv-meta">出处：<a href="https://doi.org/10.1177/0963721417712760" target="_blank" rel="noopener noreferrer">Sala, G. &amp; Gobet, F.，《Does Far Transfer Exist?》，Current Directions in Psychological Science 26(6): 515-520，2017</a>　·　作者未回应</div><div class="cv-why"><strong>对立缘由</strong>：推论链的末端被攻击：三项元分析显示象棋、音乐、工作记忆训练效应量小到中等，且效应量与实验设计质量负相关。</div><div class="cv-verdict"><strong>判断</strong>：反方在「远迁移」上证据更硬。「聚焦提升本领域表现」成立，「聚焦带来跨领域迁移」须降级为条件性主张。</div></div><div class="cv-view"><div class="cv-gist"><span class="ev verified">已查证</span>刻意练习只解释 12% 的表现差异，职业领域不足 1%</div><div class="cv-meta">出处：<a href="https://doi.org/10.1177/0956797614535810" target="_blank" rel="noopener noreferrer">Macnamara, B. N., Hambrick, D. Z. &amp; Oswald, F. L.，《Deliberate Practice and Performance》，Psychological Science 25(8): 1608-1618，2014</a>　·　作者已回应</div><div class="cv-why"><strong>对立缘由</strong>：量级不同：投入量与卓越的关联在真实职业场景里极弱，未解释部分可能来自起始年龄、认知能力、机遇。</div><div class="cv-verdict"><strong>判断</strong>：这条不构成反驳，反而与本书相通——书从未主张「练得多就能成」，而主张「想得更对」。列此以防读者把聚焦误读为堆时间。</div></div></div>
+<div class="cv"><div class="cv-claim"><span class="st condition">🟠 条件冲突</span>把碎片背后的模式提炼出来，就能迁移到新情境（深层迁移）<span class="cv-chain">（第五章「深层迁移」／第四章「模式化学习」）</span></div><div class="cv-view"><div class="cv-gist"><span class="ev verified">已查证</span>迁移能否发生取决于九个维度上的情境距离，不取决于是否提炼出模式</div><div class="cv-meta">出处：<a href="https://doi.org/10.1037/0033-2909.128.4.612" target="_blank" rel="noopener noreferrer">Barnett, S. M. &amp; Ceci, S. J.，《When and where do we apply what we learn?》，Psychological Bulletin 128(4): 612-637，2002</a>　·　作者已回应</div><div class="cv-why"><strong>对立缘由</strong>：归因层级不同：书把迁移失败归于学习者没提炼好，反方归因于任务侧的情境距离。</div><div class="cv-verdict"><strong>判断</strong>：本次蒸馏中打中要害最深的一条。四问管提炼，不管线索重叠；需补一步：刻意为新情境制造与旧情境重叠的线索。</div></div><div class="cv-view"><div class="cv-gist"><span class="ev verified">已查证</span>专家优势来自领域特定的巨量组块，这类知识难以跨领域迁移</div><div class="cv-meta">出处：<a href="https://doi.org/10.1177/0963721417712760" target="_blank" rel="noopener noreferrer">Chase &amp; Simon（1973）组块理论、Gobet &amp; Simon（1996）模板理论；综述见 Sala &amp; Gobet 2017</a>　·　作者未回应</div><div class="cv-why"><strong>对立缘由</strong>：因果方向不同：书认为「学会看模式→成为专家」，反方认为「长期沉浸→长出模式」，模式是结果而非方法。</div><div class="cv-verdict"><strong>判断</strong>：最难反驳——它质疑模式化学习的可教性。可并存的弱主张：模式可教，但它加速的是组织素材，不能替代素材量。</div></div></div>
+<div class="cv"><div class="cv-claim"><span class="st degree">🟡 程度冲突</span>五项修炼配口诀与六策略，构成一套可落地执行的成人学习操作系统<span class="cv-chain">（全书结构（导论提出，五章分述））</span></div><div class="cv-view"><div class="cv-gist"><span class="ev verified">已查证</span>框架条理整齐，但产出的是「看起来有结构的清单」而非可执行判断</div><div class="cv-meta">出处：<a href="https://yabook.blog/pl/19355.html" target="_blank" rel="noopener noreferrer">公开读书社区匿名短评（yabook.blog 收录评论页），2025-2026</a></div><div class="cv-why"><strong>对立缘由</strong>：评价标准不同：作者以体系自洽为标准，读者以「读完能否多做对一个决定」为标准。另有评论称全书「肤浅」「把常识包装一下又是一本新书」。</div><div class="cv-verdict"><strong>判断</strong>：读者体验层面的有效反馈，不是学理反驳。它准确指出第二、四章操作颗粒度不足——本包以「硬判据」补齐。</div></div><div class="cv-view"><div class="cv-gist"><span class="ev unverified">未证实</span>存在一种批评认为，口诀化把复杂判断压成口号，反而削弱判断力</div><div class="cv-meta">出处：中文读书社区广泛流传的说法，未能追溯到原始出处</div><div class="cv-why"><strong>对立缘由</strong>：传播效率与判断精度之间的取舍。因查不到原始出处，此处只陈述观点、不冠人名。</div><div class="cv-verdict"><strong>判断</strong>：对本书只部分成立（书是「策略+口诀」配对），但对二手传播完全成立：口诀活下来，条件死了。</div></div></div>
+<h4 class="sub-h">推演性反驳（无文献依据，仅供参考）</h4><table class="data-table"><thead><tr><th>针对主张</th><th>推演的反驳</th><th>置信度</th><th>为何无法查证</th></tr></thead><tbody><tr><td>聚焦长板</td><td>个人承担无限责任的场景（个体户、创业者、独立顾问）中，不补短板会造成致命缺口</td><td>中</td><td>属情境推演，未见针对该书的实证研究</td></tr><tr><td>先破后立</td><td>高压与时间压力下，「先破」制造行动真空，此时先立后破更稳</td><td>中</td><td>与「搁置而非删除」方向一致，但无直接实验</td></tr><tr><td>去学校化</td><td>中国高考体系的应试惯性远强于作者引用的西方样本，处方成本被低估</td><td>中</td><td>无跨文化实证，属合理推断</td></tr><tr><td>口诀可落地</td><td>口诀的可迁移性可能来自其模糊（模糊才到处能用），使用者会误以为处处适用</td><td>低</td><td>纯逻辑推演</td></tr></tbody></table>
+</div>
+<div class="section" id="s-dialectics">
+<h2 class="section-title">辩证分析：到底谁对</h2>
+<h4 class="sub-h">一、争议性质判定（先定性，再论理）</h4><table class="data-table"><thead><tr><th>争议</th><th>性质</th><th>说明</th></tr></thead><tbody><tr><td>反向学习是删除旧知识还是搁置旧理解</td><td><span class="nature definition">定义之争</span></td><td>「去除」在口语里指清掉，在证据里只支持新学习压制旧学习。定义为「删除」则有事实可裁：不存在删除，反方赢。</td></tr><tr><td>成人与学生是否两套学习机制</td><td><span class="nature condition">条件之争</span></td><td>「任务目标不同」成立且近乎自明；「认知机制不同」缺乏可操作化证据。两个命题被书捆在一起表述。</td></tr><tr><td>聚焦专精 vs 全面发展</td><td><span class="nature condition">条件之争</span></td><td>取决于环境的规则清晰度与反馈延迟：规则清晰则专精赢，规则模糊、反馈延迟则广度采样赢。</td></tr><tr><td>提炼模式能否带来迁移</td><td><span class="nature condition">条件之争</span></td><td>近迁移成立、远迁移罕见；主变量是情境距离而非提炼质量。</td></tr><tr><td>框架是否可落地</td><td><span class="nature degree">degree</span></td><td>双方对结构完整无分歧，分歧在操作颗粒度。可用读者产出度量，属可裁判但成本高的经验问题。</td></tr></tbody></table><p class="table-note">事实之争看数据，条件之争划边界，定义之争先统一术语，价值之争只陈述不裁决——把价值之争当事实之争裁决，比不做辩证更糟。</p>
+<h4 class="sub-h">二、本书论据审计</h4><div class="audit"><h5>本书论据审计 · 成年人学习首要任务是去除旧知识</h5><dl><dt>论据类型</dt><dd>案例（作者自述）+ 推理（地基论）+ 权威（安提西尼、叔本华、凯恩斯、芒格的散论）</dd><dt>证据链缺口</dt><dd>从「旧观念可能有害」跳到「首要任务是去除」，缺一步：为什么不是「先装新的、旧的自然退场」？书里「用加法做减法」的表述已承认替换机制，等于自我否定了「先破」的必要性</dd><dt>可重复性</dt><dd>无。书中未提供可重复检验；unlearning 概念在管理学界被系统复核后被认为缺乏实证基础</dd><dt>外部效度</dt><dd>样本是作者自己与他培训过的高能力管理者（华为、小米、新东方等），属有认知余量与试错空间的人群；生存压力下的个体成本结构完全不同</dd><dt>时间效度</dt><dd>2025 年出版，「旧经验折旧快」的判断在 AI 冲击下反而更成立，未过时</dd><dt>立场折扣</dt><dd>作者是领导力与学习力培训/课程的提供者，本书为得到课程《刘澜·学习力30讲》的体系化产物；「你需要一套系统方法」与其商业方向一致。属折扣系数，非否定理由</dd></dl><div class="concl"><strong>结论</strong>：口号层不成立，操作层成立。应改写为：把已验证失效的信念降级为假设，立刻接一条替代动作——顺序不是「先破」，是「边立边破」</div></div><div class="audit"><h5>本书论据审计 · 成人学习与学校学习是两套机制</h5><dl><dt>论据类型</dt><dd>案例（课堂观察、管理者反馈）+ 权威（诺尔斯、加德纳、凯根）</dd><dt>证据链缺口</dt><dd>从「学校习惯在工作中不灵」跳到「两套机制」，漏掉第三解释：不是机制不同，而是评价标准不同（学校考唯一解，工作考约束下达成结果）</dd><dt>可重复性</dt><dd>弱。成人教育学三十余年实证未收敛，本主张继承了这个弱点</dd><dt>外部效度</dt><dd>引用的西方成人学习文献，其学校形态与中国高考体系差异显著；处方成本被低估</dd><dt>时间效度</dt><dd>尚可。中国基础教育的过程性评价改革正在削弱「标准答案」的垄断，该主张的紧迫性在下降</dd><dt>立场折扣</dt><dd>同第一条</dd></dl><div class="concl"><strong>结论</strong>：弱版本成立，强版本不成立。应表述为「两类任务目标需要不同策略」，而非「两种认知机制」</div></div><div class="audit"><h5>本书论据审计 · 聚焦少数优于全面发展</h5><dl><dt>论据类型</dt><dd>案例（西蒙、乔布斯、巴菲特、苏东坡）+ 权威（帕累托法则、专家-新手研究）</dd><dt>证据链缺口</dt><dd>案例全是幸存者，聚焦失败者的故事不可见，未做任何存活者偏差对冲</dd><dt>可重复性</dt><dd>部分。专家-新手研究稳健可重复；「聚焦导致卓越」不可重复（刻意练习元分析仅解释 12%）</dd><dt>外部效度</dt><dd>西蒙、乔布斯是天赋与资源都极高的个案；普通人复制「聚焦」这个动作而不复制判断力，常结果是「专注地走错方向」</dd><dt>时间效度</dt><dd>在规则快速变动的领域，「聚焦不变」可能锁死在正被推翻的规律上</dd><dt>立场折扣</dt><dd>弱（该主张不直接服务作者业务）</dd></dl><div class="concl"><strong>结论</strong>：方向可用，量级需大幅打折。只承诺本领域表现，删除跨领域承诺</div></div><div class="audit"><h5>本书论据审计 · 提炼模式即可深层迁移</h5><dl><dt>论据类型</dt><dd>案例（海底捞眼镜布三种迁移）+ 权威（专家-新手研究、迁移理论）</dd><dt>证据链缺口</dt><dd>全书最大跳跃。海底捞案例证明了「同一素材能提炼出三种模式」，没证明「提炼出模式的人在新情境里成功了」——书中的成功是推演，不是追踪数据</dd><dt>可重复性</dt><dd>反方证据充足且方向相反（Barnett &amp; Ceci 的九维框架、Sala &amp; Gobet 元分析）。「远迁移很少发生」是当前主流判断</dd><dt>外部效度</dt><dd>案例来自服务业与制造业，迁移距离近（同为「顾客-服务」结构）；对跨行业的远距离迁移，乐观缺乏支撑</dd><dt>时间效度</dt><dd>不涉及时效</dd><dt>立场折扣</dt><dd>强。「深层迁移是最重要能力」是全书价值核心，也是课程卖点，对其证据强度应更严</dd></dl><div class="concl"><strong>结论</strong>：方向可信，机制归因错误。迁移确实难，但难在线索不重叠，不在模式提炼得不够好</div></div><div class="audit"><h5>本书论据审计 · 五项修炼是可落地的操作系统</h5><dl><dt>论据类型</dt><dd>体系建构（自洽性）+ 案例</dd><dt>证据链缺口</dt><dd>五项的关系被论证，但操作颗粒度不均：第一章与第五章细（有四问、有误区清单），第二、四章粗（策略多、判据少）</dd><dt>可重复性</dt><dd>无法评估（无实施研究）</dd><dt>外部效度</dt><dd>读者假设为「有阅读习惯、有管理经验」的人；对不常读书者，388 页与概念密度本身构成筛选</dd><dt>时间效度</dt><dd>不涉及时效</dd><dt>立场折扣</dt><dd>强。体系完整性本身是课程产品的卖点</dd></dl><div class="concl"><strong>结论</strong>：结构可信，颗粒度需外部补齐。这正是本包存在的理由</div></div>
+<h4 class="sub-h">三、反方观点审计（反批评也不是天然正确）</h4><div class="audit"><h5>反方观点审计 · Howells &amp; Scholderer：unlearning 缺乏实证基础，实为搁置</h5><dl><dt>是否打中靶心</dt><dd>打中。针对的正是「首要任务是去除旧知识」这一核心表述，不是稻草人。唯一需注意：该文讨论组织层面，本书讨论个体层面——但该文的批评恰是从个体心理学文献出发的，跨层不构成豁免</dd><dt>反方证据质量</dt><dd>高。系统复核 + 逐一检视高被引案例 + 同行评议期刊（Scopus 引用 68 次）。弱点是概念批判而非实验，无法证明「个体身上绝不可能发生」</dd><dt>是否同层对话</dt><dd>是，同为「旧知识能否被主动清除」的事实问题</dd></dl><div class="concl"><strong>结论</strong>：反方在事实层更准，本书在实践层仍可用——它的处方本身就是「搁置 + 替换」。这是本次最有价值的假冲突识别</div></div><div class="audit"><h5>反方观点审计 · Bouton：消退不等于遗忘，旧学习随情境回归</h5><dl><dt>是否打中靶心</dt><dd>打中且更狠。它不否认新学习能压制旧学习，而是否认压制是永久的</dd><dt>反方证据质量</dt><dd>高。基础实验心理学，机制清晰、现象稳健（renewal、自发恢复），综述发表于 Learning &amp; Memory</dd><dt>是否同层对话</dt><dd>是（机制层）</dd></dl><div class="concl"><strong>结论</strong>：反方成立，应写入操作层：反向学习必须绑定情境提醒，并做 7 天观察点</div></div><div class="audit"><h5>反方观点审计 · Rachal：成人教育学实证不确定</h5><dl><dt>是否打中靶心</dt><dd>部分打中。打的是「成人有独立机制」的强主张；本书实际表述更接近「学校隐性课程的习惯不适应工作」，属较弱、较易成立的版本。反方有轻微越靶</dd><dt>反方证据质量</dt><dd>中高。三十年文献的批判性综述，但批评对象是诺尔斯式成人教育学，而本书还引了加德纳、凯根、圣吉作为支撑</dd><dt>是否同层对话</dt><dd>是（同为「成人是否质上不同」）</dd></dl><div class="concl"><strong>结论</strong>：反方赢强版本，本书弱版本存活。读者应把「两套机制」改写为「两类任务目标」</div></div><div class="audit"><h5>反方观点审计 · Sala &amp; Gobet / Chase &amp; Simon：远迁移罕见 + 组块领域特定</h5><dl><dt>是否打中靶心</dt><dd>前者打中一半（打推论链末环），后者打中要害（打模式化学习的可教性前提）</dd><dt>反方证据质量</dt><dd>元分析与系统综述质量高，但对象是儿童的象棋/音乐/工作记忆训练，与成人管理学习场景差异大；组块理论是描述性理论，并未直接检验「显性教授模式是否有效」——从「专家拥有领域特定组块」推不出「教模式无效」，反方也有跳跃</dd><dt>是否同层对话</dt><dd>是</dd></dl><div class="concl"><strong>结论</strong>：A：反方在远迁移上更准，本书应降级为本领域近迁移；B：各有跳跃，最稳妥的合成是——模式可教，但它加速的是组织已有素材，不能替代素材量</div></div><div class="audit"><h5>反方观点审计 · 读书社区匿名短评：框架条理整齐但落不了地</h5><dl><dt>是否打中靶心</dt><dd>部分打中。准确指向第二、四章颗粒度不足；但「我认为它是自嗨」是体验陈述，不是可检验判断。同一页面亦有「拍案叫绝」的相反评价，说明读者效果高度依赖其既有水平</dd><dt>反方证据质量</dt><dd>低。匿名短评，无抽样无标准，可能有平台用户构成偏差；评论者自己也提到「得到系水军太多」，说明该页好评存在水化迹象</dd><dt>是否同层对话</dt><dd>否。作者论「体系是否自洽」，评论者陈述「我读起来是否有用」——事实层与体验层错位</dd></dl><div class="concl"><strong>结论</strong>：作为体验反馈有效，作为学理批评不成立。唯一可采纳的是：颗粒度不足，需外部补齐</div></div>
+<h4 class="sub-h">四、条件化结论：该信谁，看情况</h4><table class="data-table"><thead><tr><th>如果你的情境是</th><th>更该信</th><th>理由</th></tr></thead><tbody><tr><td>旧做法刚失效，你能说清是哪条信念在支撑</td><td>本书</td><td>有明确归因对象的信念替换，正是反向学习的适用区</td></tr><tr><td>你只是「感觉不对劲」，说不出哪条信念</td><td>都不该全信</td><td>此时做观念手术是猜谜，先收集失败样本</td></tr><tr><td>环境规则清晰、反馈及时（乐器、竞技、编程）</td><td>本书</td><td>专精收益明确；刻意练习元分析在此类领域效应最高（游戏 26%、音乐 21%、体育 18%）</td></tr><tr><td>环境规则模糊、反馈延迟（职业选择、创业方向、管理能力）</td><td>《范围》（反方）</td><td>此类领域刻意练习解释力不足 1%，广度采样与晚专业化更稳</td></tr><tr><td>要把学到的东西用到同一职能的邻近场景</td><td>本书（四问）</td><td>情境距离近，提炼模式确实有效</td></tr><tr><td>要跨行业、跨职能搬经验</td><td>反方（Barnett &amp; Ceci）</td><td>成败主变量是线索重叠度，先设计重叠，再谈模式</td></tr><tr><td>你带团队、要建组织能力</td><td>都不该全信</td><td>本书是个体学习论，组织学习需另一套（流程、激励、知识管理）</td></tr><tr><td>你处在生存压力下、没有试错预算</td><td>都不该全信</td><td>两方都假设有认知余量与失败空间；资源约束下先做可逆小实验</td></tr></tbody></table>
+<h4 class="sub-h">五、本次蒸馏的处置建议</h4><ul class="disp"><li class="safe">four-question-learning：合上材料用自己的话写三行、写成执行意图这两步，与检索练习、生成效应的实证方向一致，是全书最稳的部分。但需附带：迁移成败取决于线索重叠，不只是提炼质量</li><li class="safe">interactive-learning：ICAP 有实证支撑，且原作者本人把它表述为假说，未被过度推销</li><li class="safe">three-step-answer：先分类再判断是低风险的高阶思维动作，不依赖任何争议性前提</li><li class="conditional">unlearning-audit：当「替换」用，不当「删除」用。若使用者理解为清空旧知识再学，已被 Howells &amp; Scholderer（2016）与 Bouton（2004）双重否定</li><li class="conditional">focus-six-lenses：仅承诺本领域内的能力提升，不承诺跨领域迁移；探索期不适用</li><li class="conditional">pattern-pyramid：模式加速组织，不替代素材；样本少于 3 个时禁用</li><li class="conditional">pattern-tree：树干必须来自真实问题；卡片少于 30 条时禁用</li><li class="downgrade">「成年人学习的首要任务是去除旧知识」：作为口号降级为作者观点；作为「替换失效信念」的操作可保留</li><li class="downgrade">「成人与学生是两套学习机制」：降级为「两类任务目标」</li><li class="downgrade">「深层迁移是最重要的学习能力」：这是价值排序，不是事实断言</li><li class="disclaimer">pattern-pyramid / pattern-tree：调用时提示「模式化学习可能把专家的产物误当成成为专家的方法」</li><li class="disclaimer">unlearning-audit：调用时提示「不要在无替代动作时执行『破』」</li></ul>
+<h4 class="sub-h">六、未解的疑问</h4><ul class="open-q"><li>如果旧知识不能被删除，那「反向学习」与「学习」的差别到底是什么？作者用「减法式学习」区分，但减法若实为替换，这个区分只剩修辞价值</li><li>五项的因果关系未被检验。书中说「反向学习是破，后四项是立」，但没有证据表明必须先破后立；反方证据（Klein 1989 的 parenthetic learning）暗示可以先立后破。此顺序问题本次无法裁决，只能标出</li><li>读者效果两极分化没有解释：同一本书，有人「拍案叫绝」，有人「150 字大纲翻来覆去」。差异来自读者既有模式量，还是期望落差？没有数据</li><li>中文语境下的外部效度未知：处方建立在对中国高考体系的亲历反思上，理论支撑多来自西方文献，错配程度本次未能评估</li><li>没有找到任何一篇学术书评。这不等于本书无价值，但意味着「它是否经得起同行审读」目前无人回答</li></ul>
+</div>
+<div class="section" id="s-reading">
+<h2 class="section-title">拓展书目：接着读什么</h2>
+<p class="table-note">每一本都要回答：读完《反向学习》之后，为什么还需要读它。写不出与本书具体差异的，一律不列。</p>
+<div class="rg same"><div class="rg-title">A 同向深化（把这本书做实）<span class="rg-desc">结论同向，但证据更硬、操作更细</span></div><table class="data-table"><thead><tr><th>书名</th><th>作者</th><th>年份</th><th>推荐理由（与本书的具体差异）</th><th>优先级</th></tr></thead><tbody><tr><td><strong>《人是如何学习的》</strong></td><td>美国国家研究理事会（Bransford 等编）</td><td>2000（扩展版 2018）</td><td>本书反复引用的上游文献。差别在于它给研究证据与机制，本书给面向行动的中文口诀。想知道「为什么」而不是「怎么做」，读这本</td><td><span class="prio">必读</span></td></tr><tr><td><strong>《认知天性》</strong></td><td>Brown, Roediger &amp; McDaniel</td><td>2014</td><td>本书几乎不谈记忆层面的实证方法（检索练习、间隔、交错）。如果你「学完就忘」，问题可能不在模式，而在检索——这本补的就是这一层</td><td><span class="prio">必读</span></td></tr><tr><td><strong>《刻意练习》</strong></td><td>Ericsson &amp; Pool</td><td>2016</td><td>与本书「注重过程而非结果」同源，但本书没给反馈机制设计。这本给：如何构造带即时反馈的练习单元</td><td><span class="prio">推荐</span></td></tr></tbody></table></div>
+<div class="rg counter"><div class="rg-title">B 反向对冲（看清争议边界）<span class="rg-desc">结论相反或强限定，读它才知道本书的边界在哪</span></div><table class="data-table"><thead><tr><th>书名</th><th>作者</th><th>年份</th><th>推荐理由（与本书的具体差异）</th><th>优先级</th></tr></thead><tbody><tr><td><strong>《范围》</strong></td><td>David Epstein</td><td>2019</td><td>直接对冲「聚焦擅长、尽早专精」。它论证在规则不明、反馈延迟的领域（多数真实职业），广度采样与晚专业化优于早期深耕，与本书第三章正面对撞</td><td><span class="prio">必读</span></td></tr><tr><td><strong>《隐藏的潜能》</strong></td><td>Adam Grant</td><td>2023</td><td>对冲「聚焦长板、放弃补短板」。它主张成长来自品格技能（寻求不适、吸收反馈）而非放大既有优势，并给出脚手架式成长的做法</td><td><span class="prio">推荐</span></td></tr></tbody></table></div>
+<div class="rg upstream"><div class="rg-title">C 上位理论（跳出本书看本书）<span class="rg-desc">提供更底层的解释框架，把本书降格为特例</span></div><table class="data-table"><thead><tr><th>书名</th><th>作者</th><th>年份</th><th>推荐理由（与本书的具体差异）</th><th>优先级</th></tr></thead><tbody><tr><td><strong>《情境学习：合法的边缘性参与》</strong></td><td>Lave &amp; Wenger</td><td>1991</td><td>补上本书缺的那层解释：知识本质上情境化。抽象出的模式难迁移，不是因为学习者不够聪明，而是知识从未真正离开过使用场景</td><td><span class="prio">必读</span></td></tr><tr><td><strong>《为什么学生不喜欢上学》</strong></td><td>Daniel T. Willingham</td><td>2009</td><td>用认知科学说明事实性知识是理解的前提：没有事实储备，模式无处附着。它把「模式化学习」放回更基础的层级——模式是上层建筑</td><td><span class="prio">推荐</span></td></tr></tbody></table></div>
+<div class="rg method"><div class="rg-title">D 方法补足（补能力盲区）<span class="rg-desc">解决本书方法做不到的事</span></div><table class="data-table"><thead><tr><th>书名</th><th>作者</th><th>年份</th><th>推荐理由（与本书的具体差异）</th><th>优先级</th></tr></thead><tbody><tr><td><strong>《这样读书就够了》</strong></td><td>赵周</td><td>2012（后有修订版）</td><td>本书的四问偏认知，缺一套可执行的读书流程与产出物（便签法：复述—关联经验—规划应用）。落地时它的颗粒度更细</td><td><span class="prio">推荐</span></td></tr><tr><td><strong>《复盘+：把经验转化为能力》</strong></td><td>邱昭良</td><td>2016</td><td>本书讲「从他人材料中学习」很强，讲「从自己失败中学习」只有一个口诀。这本给完整复盘流程，补上反向学习缺失的归因方法</td><td><span class="prio">推荐</span></td></tr></tbody></table></div>
+<h4 class="sub-h">阅读路线建议</h4><ul class="open-q"><li><strong>只有 2 小时</strong>：读《人是如何学习的》第 2-3 章（专家知识、迁移），把本书的概念接回证据</li><li><strong>想做决策（该不该聚焦、该不该转行）</strong>：《范围》与本书第三章对照读，再用条件表定位自己的处境</li><li><strong>想建体系</strong>：《情境学习》→ 回看本书第四五章 → 《复盘+》。顺序不能反：先懂为什么迁移难，再学怎么迁移，最后学怎么从自己身上取素材</li><li><strong>只想解决「学完就忘」</strong>：直接读《认知天性》，本书在这个问题上帮不上忙</li></ul>
+</div>
+<div class="section" id="s-glossary">
+<h2 class="section-title">术语词典</h2>
+<div class="gloss-grid"><div class="gloss"><h5>学习力第一公式</h5><p>学习 = 我知道 + 我不知道。新知识必须与已有知识建立联系，因此「我知道」既是基础也可能是障碍。</p></div><div class="gloss"><h5>反向学习</h5><p>减法式学习：识别并卸下错误、过时、低效的旧知识。口诀「我要改变什么？」。本包按「降级为假设 + 接替代动作」操作化。</p></div><div class="gloss"><h5>参考答案思维方式</h5><p>重要问题没有标准答案，只有参考答案；他人的答案要学，自己的答案也要当参考。口诀「看情况」。</p></div><div class="gloss"><h5>洞见分类</h5><p>按穿透表面、决定结果的本质维度切分情况。三特征：主观、理想、本质。配套三步：看情况→分类→定位。</p></div><div class="gloss"><h5>互动学习</h5><p>两个参考答案之间的碰撞，不必是两个人。用 ICAP 分级，用守破离处理对方观点，用事前建构实现单人互动。</p></div><div class="gloss"><h5>聚焦</h5><p>少数知识比多数知识更重要。带来擅长与学习的马太效应。六维：不变／实用／擅长／专题／作者／样本。</p></div><div class="gloss"><h5>模式化学习</h5><p>学习 = 模式 + 碎片。模式是把握共性、整体、本质的一套知识；碎片只呈现个性、部分、表象。</p></div><div class="gloss"><h5>模式化学习金字塔</h5><p>零学习→单点碎片→多点碎片→模式识别→模式迁移。多数人停在第三层。</p></div><div class="gloss"><h5>中距离学习</h5><p>向高处调整（更一般）、向远处调整（换领域）去找模式。太近只见个案，太远只剩空话。</p></div><div class="gloss"><h5>模式树</h5><p>以一个「树干」（你反复要回答的问题）为核心组织模式。树干定错，整棵树都错。</p></div><div class="gloss"><h5>表层迁移</h5><p>把表层碎片直接搬到新情境。看见海底捞发眼镜布，回去也发眼镜布。</p></div><div class="gloss"><h5>深层迁移</h5><p>把知识去情境化，提炼模式再应用。迁移 = 旧知识 + 新情境；深层迁移 = 旧的模式知识 + 新情境。</p></div><div class="gloss"><h5>四问学习法</h5><p>我听到什么→我想到什么→我变成什么→我用到哪里。四误区：听得太单调、想得不深刻、变得不灵活、用得太宽泛。</p></div><div class="gloss"><h5>思想成熟三阶段</h5><p>依赖（标准答案）→独立（参考答案 1.0）→互相依赖（参考答案 2.0）。</p></div><div class="gloss"><h5>守破离</h5><p>改造自日本技艺三阶段：守（何时对）／破（何时错）／离（我该怎么用）。</p></div><div class="gloss"><h5>用加法做减法</h5><p>不试图删除旧习惯，而是养成新习惯去替代它。本书最经得起检验的一句操作说明。</p></div></div>
+</div>
+<div class="section" id="s-path">
+<h2 class="section-title">学习路径</h2>
+<div class="path-grid"><div class="path-card"><h4>第一阶段：先止血</h4><p>把「感觉不对」变成一条可替换的信念。不做完这一步，后面都是往漏水的桶里倒水。</p><ul><li>unlearning-audit</li></ul></div><div class="path-card"><h4>第二阶段：换判断方式</h4><p>从找唯一解改为找条件解，再学会审校每一个权威给的答案。</p><ul><li>three-step-answer</li><li>reference-review</li></ul></div><div class="path-card"><h4>第三阶段：换输入与结算方式</h4><p>让每次输入都留下自己的话，并逼出一个一周内能做的动作。</p><ul><li>interactive-learning</li><li>four-question-learning</li></ul></div><div class="path-card"><h4>第四阶段：换组织方式</h4><p>先筛素材，再抽模式，最后长成结构。这一步最慢，也最不该提前。</p><ul><li>focus-six-lenses</li><li>pattern-pyramid</li><li>pattern-tree</li></ul></div></div>
+</div>
+<div class="section" id="s-action">
+<h2 class="section-title">行动</h2>
+<div class="action-box"><h3>今天可做的一件事（20 分钟）</h3><ol><li>写下最近一次「明明懂却没做成」的具体事件，一句话，不评价。</li><li>倒推当时依据的那条信念，写成一句可判断真假的话（例：先把资料看完再动手）。</li><li>问：这条信念是什么时候、在哪个场景形成的？当时需要什么条件？那些条件今天还在吗？</li><li>写一条替代动作，句式必须是「当___时，我改做___」，不许写「不要___」。</li><li>定一个 7 天后的观察点：如果新信念成立，这一周我应该看到什么？写成能打勾的一条。</li></ol></div>
+</div>
+<div class="footer"><p>反向学习：学习力的五项修炼 · Unlearning: The Five Disciplines of Learning · 知识蒸馏</p>
+<p>本页是对一本书的方法论重构，不是原书替代品。书中案例与数据的原始出处以原书注释为准；所有外部文献结论标注于「对立观点」与「辩证分析」两节，可经 DOI 复核。</p>
+<p class="src">书目：刘澜《反向学习：学习力的五项修炼》，机械工业出版社，2025 年 3 月，ISBN 978-7-111-77476-1（英文题名 Unlearning: The Five Disciplines of Learning）。| 外部文献（均可经 DOI 复核）：Howells &amp; Scholderer, Management Learning 47(4):443-463, 2016, doi 10.1177/1350507615624079；Bouton, Learning &amp; Memory 11(5):485-494, 2004, doi 10.1101/lm.78804；Barnett &amp; Ceci, Psychological Bulletin 128(4):612-637, 2002, doi 10.1037/0033-2909.128.4.612；Sala &amp; Gobet, Current Directions in Psychological Science 26(6):515-520, 2017, doi 10.1177/0963721417712760；Macnamara, Hambrick &amp; Oswald, Psychological Science 25(8):1608-1618, 2014, doi 10.1177/0956797614535810；Rachal, Adult Education Quarterly 52(3):210-227, 2002, doi 10.1177/0741713602052003004；Chi &amp; Wylie, Educational Psychologist 49(4):219-243, 2014, doi 10.1080/00461520.2014.965823。| 书中要点来源：出版社内容简介、完整目录（四个独立来源一致）、5 份以上互相独立的读书笔记与思维导图。</p>
+<div class="revlog"><h5>修订记录</h5><ul><li>v1.0 首次蒸馏：8 张 RIA++ 卡片，覆盖五项修炼与 24 个策略（策略级对账见 REJECTED.md）</li><li>本次未获全书全文，全包无原文引文；R 段统一标注「要点复述，非原文」，口诀类短句按多份笔记一致处理</li><li>外部视角：5 条核心主张各跑 3 个以上检索角度，命中 8 条对立观点，其中 1 条属作者自设反驳之外的独立第三方系统复核（Howells &amp; Scholderer 2016）</li><li>纠正一处常见误传：网络流传的某篇读后感把五项修炼写成「反思/连接/跨界/行动/反学习」，与官方目录不符，已整篇排除</li></ul></div>
+</div>
+</div>
+</body>
+<script>
+(function () {
+  'use strict';
+  function setOpen(foldable, open) {
+    foldable.classList.toggle('open', open);
+    var btn = foldable.querySelector('.fh');
+    if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  document.querySelectorAll('.foldable').forEach(function (f) {
+    var btn = f.querySelector('.fh');
+    if (!btn) return;
+    btn.setAttribute('aria-expanded', f.classList.contains('open') ? 'true' : 'false');
+    btn.addEventListener('click', function () { setOpen(f, !f.classList.contains('open')); });
+  });
+  document.querySelectorAll('[data-article]').forEach(function (link) {
+    link.addEventListener('click', function (e) {
+      e.preventDefault();
+      var el = document.getElementById(link.dataset.article);
+      if (!el) return;
+      setOpen(el, true);
+      el.scrollIntoView({ behavior: 'smooth' });
+      var btn = el.querySelector('.fh');
+      if (btn) btn.focus({ preventScroll: true });
+    });
+  });
+  var sections = document.querySelectorAll('.section, .hero');
+  var navLinks = document.querySelectorAll('.sidebar a');
+  var ticking = false;
+  document.addEventListener('scroll', function () {
+    if (ticking) return;
+    window.requestAnimationFrame(function () {
+      var cur = '';
+      sections.forEach(function (s) { if (window.scrollY >= s.offsetTop - 120) cur = s.id; });
+      navLinks.forEach(function (a) {
+        a.classList.remove('active');
+        if (a.getAttribute('href') === '#' + cur) a.classList.add('active');
+      });
+      ticking = false;
+    });
+    ticking = true;
+  });
+})();
+</script>
+</html>
